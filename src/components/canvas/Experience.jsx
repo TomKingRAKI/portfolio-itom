@@ -1,74 +1,56 @@
 import { useState, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import gsap from 'gsap';
 
 import InfiniteCorridorManager from './InfiniteCorridorManager';
-import EmptyCorridor from './EmptyCorridor';
 import EntranceDoors from './EntranceDoors';
+import EmptyCorridor from './EmptyCorridor';
 import useInfiniteCamera from '../../hooks/useInfiniteCamera';
+
+// Positioning:
+// - Segment -1's SegmentDoors are at Z=15
+// - Entrance doors at Z=22 (in front of segment doors)
+// - ITOM/Avatar at Z≈5.5
+// - Camera starts at Z=28, ends at Z=8 (in front of avatar)
+const ENTRANCE_DOORS_Z = 22;
 
 /**
  * Experience Component
  * 
- * KEY FIX: Always render InfiniteCorridorManager to avoid white flashes.
- * Entrance doors + back wall physically block the view until opened.
+ * Flow:
+ * 1. Preloader fades out -> user sees 3D entrance doors
+ * 2. Click doors -> they open + camera flies through
+ * 3. Behind doors: infinite corridor with ITOM
  */
-const Experience = ({
-    loadingPhase = 'loading',
-    onEnterComplete,
-    onReachDoors,
-    onStartEntering
-}) => {
+const Experience = ({ isLoaded }) => {
+    const [hasEntered, setHasEntered] = useState(false);
     const [currentRoom, setCurrentRoom] = useState(null);
-    const [cameraZ, setCameraZ] = useState(60);
+    const [cameraZ, setCameraZ] = useState(28);
     const { camera } = useThree();
 
-    // Unified camera control
-    const {
-        getCameraZ,
-        setTargetZ,
-        ENTRANCE_DOORS_Z,
-        CAMERA_AFTER_DOORS_Z
-    } = useInfiniteCamera({
+    // Camera control - only works after entering
+    useInfiniteCamera({
         segmentLength: 80,
         scrollSpeed: 0.025,
         parallaxIntensity: 0.4,
         smoothing: 0.06,
-        loadingPhase,
-        onReachDoors
+        enabled: hasEntered
     });
 
-    // Track camera Z
+    // Track camera Z for EmptyCorridor
     useFrame(() => {
-        setCameraZ(getCameraZ());
+        setCameraZ(camera.position.z);
     });
 
-    // Handle door click - animate walking through
-    const handleDoorClick = useCallback(() => {
-        // Change phase to entering
-        onStartEntering?.();
-
-        // Animate walking through doors
-        gsap.to({ z: getCameraZ() }, {
-            z: CAMERA_AFTER_DOORS_Z,
-            duration: 2,
-            ease: 'power2.inOut',
-            onUpdate: function () {
-                setTargetZ(this.targets()[0].z);
-            },
-            onComplete: () => {
-                onEnterComplete?.();
-            }
-        });
-    }, [getCameraZ, setTargetZ, CAMERA_AFTER_DOORS_Z, onEnterComplete, onStartEntering]);
+    // Handle entrance complete
+    const handleEntranceComplete = useCallback(() => {
+        setHasEntered(true);
+    }, []);
 
     // Handle door enter from inside corridor
     const handleDoorEnter = useCallback((doorId) => {
         setCurrentRoom(doorId);
+        console.log('Entering:', doorId);
     }, []);
-
-    // Check if we should show entrance area elements
-    const showEntranceArea = loadingPhase !== 'ready';
 
     return (
         <>
@@ -77,22 +59,24 @@ const Experience = ({
             <directionalLight position={[5, 10, 5]} intensity={0.8} color="#ffffff" />
             <directionalLight position={[-5, 8, -10]} intensity={0.4} color="#ffffff" />
 
-            {/* === EMPTY CORRIDOR (only during entrance phases) === */}
-            {showEntranceArea && (
+            {/* === EMPTY CORRIDOR (provides context during entrance) === */}
+            {!hasEntered && (
                 <EmptyCorridor cameraZ={cameraZ} />
             )}
 
-            {/* === ENTRANCE DOORS (blocks view until opened) === */}
-            {showEntranceArea && (
+            {/* === ENTRANCE DOORS (visible until entered) === */}
+            {!hasEntered && (
                 <EntranceDoors
                     position={[0, 0, ENTRANCE_DOORS_Z]}
-                    onDoorClick={handleDoorClick}
-                    canClick={loadingPhase === 'doors'}
+                    onComplete={handleEntranceComplete}
                 />
             )}
 
-            {/* === MAIN CONTENT (ALWAYS rendered, entrance doors block view) === */}
-            <InfiniteCorridorManager onDoorEnter={handleDoorEnter} />
+            {/* === INFINITE CORRIDOR (segment -1 SegmentDoors hidden during entrance) === */}
+            <InfiniteCorridorManager
+                onDoorEnter={handleDoorEnter}
+                hideDoorsForSegments={hasEntered ? [] : [-1]} // Hide segment -1's doors until entered
+            />
         </>
     );
 };

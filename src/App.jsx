@@ -1,56 +1,28 @@
-import { useState, useEffect, Suspense, useCallback } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Preload } from '@react-three/drei';
+import { Preload, useTexture, Text } from '@react-three/drei';
 
 import Preloader from './components/dom/Preloader';
 import Experience from './components/canvas/Experience';
 
 import './styles/main.scss';
 
+// Preload textures so they load during preloader phase
+useTexture.preload('/images/avatar-thinking.png');
+useTexture.preload('/textures/paper-texture.png');
+
+const FONT_URL = 'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff';
+
 /**
  * App Component - ITom's Creative House
  * 
- * Loading phases:
- * 1. 'loading' - Camera auto-scrolls toward entrance doors
- * 2. 'doors' - Stopped at entrance doors, waiting for click
- * 3. 'entering' - Walking through entrance doors
- * 4. 'ready' - Full experience with scroll control
+ * Flow:
+ * 1. 2D Preloader shows while loading
+ * 2. Preloader fades -> 3D entrance doors visible
+ * 3. Click doors -> fly through -> corridor experience
  */
 function App() {
-  const [loadingPhase, setLoadingPhase] = useState('loading');
-  const [progress, setProgress] = useState(0);
-
-  // Simulate progress from 0 to 100 during loading
-  useEffect(() => {
-    if (loadingPhase !== 'loading') return;
-
-    const duration = 3000; // 3 seconds
-    const startTime = Date.now();
-
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const newProgress = Math.min(100, (elapsed / duration) * 100);
-      setProgress(newProgress);
-    }, 50);
-
-    return () => clearInterval(interval);
-  }, [loadingPhase]);
-
-  // When camera reaches doors (called by useInfiniteCamera)
-  const handleReachDoors = useCallback(() => {
-    setProgress(100);
-    setLoadingPhase('doors');
-  }, []);
-
-  // When doors are clicked - start entering phase
-  const handleStartEntering = useCallback(() => {
-    setLoadingPhase('entering');
-  }, []);
-
-  // Handle entrance complete (after walking through doors)
-  const handleEnterComplete = useCallback(() => {
-    setLoadingPhase('ready');
-  }, []);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   return (
     <div className="app">
@@ -58,7 +30,7 @@ function App() {
       <div className="canvas-wrapper">
         <Canvas
           camera={{
-            position: [0, 0.2, 60], // Start position matches useInfiniteCamera
+            position: [0, 0.2, 28], // Start in front of entrance doors at Z=22
             fov: 60,
             near: 0.1,
             far: 150
@@ -77,12 +49,9 @@ function App() {
           <fog attach="fog" args={['#fafafa', 15, 50]} />
 
           <Suspense fallback={null}>
-            <Experience
-              loadingPhase={loadingPhase}
-              onReachDoors={handleReachDoors}
-              onStartEntering={handleStartEntering}
-              onEnterComplete={handleEnterComplete}
-            />
+            <Experience isLoaded={isLoaded} />
+            {/* Force font load */}
+            <Text font={FONT_URL} visible={false}>preload</Text>
             <Preload all />
           </Suspense>
         </Canvas>
@@ -90,7 +59,7 @@ function App() {
 
       {/* UI Overlay */}
       <div className="ui-overlay">
-        {loadingPhase === 'ready' && (
+        {isLoaded && (
           <>
             <div className="scroll-hint">
               <span className="scroll-hint__text">Scroll to explore</span>
@@ -103,11 +72,8 @@ function App() {
         )}
       </div>
 
-      {/* Minimal Preloader Overlay */}
-      <Preloader
-        loadingPhase={loadingPhase}
-        progress={Math.round(progress)}
-      />
+      {/* 2D Preloader */}
+      <Preloader onComplete={() => setIsLoaded(true)} />
     </div>
   );
 }

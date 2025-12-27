@@ -22,7 +22,8 @@ const SEGMENT_LENGTH = 80;
 
 const CorridorSegment = ({
     segmentIndex = 0,
-    onDoorEnter
+    onDoorEnter,
+    hideSegmentDoors = false // Hide only SegmentDoors while keeping content preloaded
 }) => {
     // Calculate Z offset based on segment index
     // Segment 0 starts at Z=10, goes to Z=-70
@@ -151,11 +152,13 @@ const CorridorSegment = ({
                 />
             ))}
 
-            {/* === SEGMENT END DOORS (auto-open when approaching) === */}
-            <SegmentDoors
-                position={[0, 0, zOffset - SEGMENT_LENGTH + 5]}
-                corridorHeight={3.5}
-            />
+            {/* === SEGMENT END DOORS (hidden during entrance to avoid conflict) === */}
+            {!hideSegmentDoors && (
+                <SegmentDoors
+                    position={[0, 0, zOffset - SEGMENT_LENGTH + 5]}
+                    corridorHeight={3.5}
+                />
+            )}
         </group>
     );
 };

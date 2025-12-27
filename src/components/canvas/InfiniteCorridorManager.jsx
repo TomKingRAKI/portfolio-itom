@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 
 import CorridorSegment, { SEGMENT_LENGTH } from './CorridorSegment';
@@ -7,17 +7,19 @@ import CorridorSegment, { SEGMENT_LENGTH } from './CorridorSegment';
  * InfiniteCorridorManager Component
  * 
  * Manages dynamic generation/removal of corridor segments.
- * Keeps 3 segments active at any time (prev, current, next).
- * Works in both directions for true infinite scrolling.
+ * 
+ * hideDoorsForSegments: Array of segment indices that should hide their SegmentDoors
+ * (used during entrance to avoid duplicate doors while keeping content preloaded)
  */
-const InfiniteCorridorManager = ({ onDoorEnter }) => {
+const InfiniteCorridorManager = ({
+    onDoorEnter,
+    hideDoorsForSegments = [] // Segments that should hide their SegmentDoors
+}) => {
     const { camera } = useThree();
     const [activeSegments, setActiveSegments] = useState([0]);
 
     // Calculate which segment the camera is in
     const getSegmentFromZ = useCallback((z) => {
-        // Segment 0 starts at Z=10
-        // Each segment is SEGMENT_LENGTH units
         return Math.floor((10 - z) / SEGMENT_LENGTH);
     }, []);
 
@@ -25,7 +27,7 @@ const InfiniteCorridorManager = ({ onDoorEnter }) => {
     useFrame(() => {
         const currentSegment = getSegmentFromZ(camera.position.z);
 
-        // Define which segments should be active (prev, current, next)
+        // Always render segments around camera (prev, current, next)
         const shouldBeActive = [
             currentSegment - 1,
             currentSegment,
@@ -48,6 +50,7 @@ const InfiniteCorridorManager = ({ onDoorEnter }) => {
                     key={`segment-${segmentIndex}`}
                     segmentIndex={segmentIndex}
                     onDoorEnter={onDoorEnter}
+                    hideSegmentDoors={hideDoorsForSegments.includes(segmentIndex)}
                 />
             ))}
         </group>
