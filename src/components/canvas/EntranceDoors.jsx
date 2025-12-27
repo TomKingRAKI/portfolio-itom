@@ -66,11 +66,13 @@ const EntranceDoors = ({
     const [isHovered, setIsHovered] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
     const { camera } = useThree();
-    const frameTexture = useTexture('/textures/frame_sketch.png');
-    const doorLeftTexture = useTexture('/textures/door_left_sketch.png');
-    const doorRightTexture = useTexture('/textures/door_right_sketch.png');
-    const handleLeftTexture = useTexture('/textures/handle_left_sketch.png');
-    const handleRightTexture = useTexture('/textures/handle_right_sketch.png');
+    const frameTexture = useTexture('/textures/doors/frame_sketch.webp');
+    const doorLeftTexture = useTexture('/textures/doors/door_left_sketch.webp');
+    const doorRightTexture = useTexture('/textures/doors/door_right_sketch.webp');
+    const handleLeftTexture = useTexture('/textures/doors/handle_left_sketch.webp');
+    const handleRightTexture = useTexture('/textures/doors/handle_right_sketch.webp');
+    const doorBackTexture = useTexture('/textures/doors/door_back_left_sketch.webp');
+    const edgeTexture = useTexture('/textures/doors/pien.webp');
 
     // Door dimensions - calculated from texture proportions (332x848 = 1:2.55)
     const doorWidth = 0.94;
@@ -248,7 +250,7 @@ const EntranceDoors = ({
 
             {/* LEFT DOOR */}
             <group ref={leftDoorRef} position={[-doorWidth, doorCenterY, 0]}>
-                {/* Solid 3D Door Body */}
+                {/* Solid 3D Door Body with edge texture */}
                 <mesh
                     position={[doorWidth / 2, 0, 0.06]}
                     onClick={handleClick}
@@ -256,11 +258,11 @@ const EntranceDoors = ({
                     onPointerLeave={handlePointerLeave}
                 >
                     <boxGeometry args={[doorWidth, doorHeight, 0.04]} />
-                    <meshStandardMaterial color="#f8f5f0" roughness={0.9} />
+                    <meshStandardMaterial map={edgeTexture} roughness={0.9} />
                 </mesh>
 
-                {/* Texture Face */}
-                <mesh position={[doorWidth / 2, 0, 0.13]}>
+                {/* Front Texture Face */}
+                <mesh position={[doorWidth / 2, 0, 0.09]}>
                     <planeGeometry args={[doorWidth, doorHeight]} />
                     <meshStandardMaterial
                         map={doorLeftTexture}
@@ -270,8 +272,20 @@ const EntranceDoors = ({
                     />
                 </mesh>
 
+                {/* Back Texture Face (mirrored) */}
+                <mesh position={[doorWidth / 2, 0, 0.03]} rotation={[0, Math.PI, 0]} scale={[-1, 1, 1]}>
+                    <planeGeometry args={[doorWidth, doorHeight]} />
+                    <meshStandardMaterial
+                        map={doorBackTexture}
+                        transparent={true}
+                        alphaTest={0.5}
+                        roughness={0.8}
+                        side={2}
+                    />
+                </mesh>
+
                 {/* Handle Layer (animated) - pivot at screw center (292,459 on 332x848 texture) */}
-                <group ref={leftHandleRef} position={[doorWidth / 2 + 0.357, -0.099, 0.14]}>
+                <group ref={leftHandleRef} position={[doorWidth / 2 + 0.357, -0.099, 0.10]}>
                     <mesh position={[-0.357, 0.099, 0]}>
                         <planeGeometry args={[doorWidth, doorHeight]} />
                         <meshStandardMaterial
@@ -286,19 +300,19 @@ const EntranceDoors = ({
 
             {/* RIGHT DOOR */}
             <group ref={rightDoorRef} position={[doorWidth, doorCenterY, 0]}>
-                {/* Solid 3D Door Body */}
+                {/* Solid 3D Door Body with edge texture */}
                 <mesh
                     position={[-doorWidth / 2, 0, 0.06]}
                     onClick={handleClick}
                     onPointerEnter={handlePointerEnter}
                     onPointerLeave={handlePointerLeave}
                 >
-                    <boxGeometry args={[doorWidth, doorHeight, 0.12]} />
-                    <meshStandardMaterial color="#f8f5f0" roughness={0.9} />
+                    <boxGeometry args={[doorWidth, doorHeight, 0.04]} />
+                    <meshStandardMaterial map={edgeTexture} roughness={0.9} />
                 </mesh>
 
-                {/* Texture Face */}
-                <mesh position={[-doorWidth / 2, 0, 0.13]}>
+                {/* Front Texture Face */}
+                <mesh position={[-doorWidth / 2, 0, 0.09]}>
                     <planeGeometry args={[doorWidth, doorHeight]} />
                     <meshStandardMaterial
                         map={doorRightTexture}
@@ -308,8 +322,19 @@ const EntranceDoors = ({
                     />
                 </mesh>
 
+                {/* Back Texture Face */}
+                <mesh position={[-doorWidth / 2, 0, 0.03]} rotation={[0, Math.PI, 0]}>
+                    <planeGeometry args={[doorWidth, doorHeight]} />
+                    <meshStandardMaterial
+                        map={doorBackTexture}
+                        transparent={true}
+                        alphaTest={0.5}
+                        roughness={0.8}
+                    />
+                </mesh>
+
                 {/* Handle Layer (animated) - pivot at screw center (40,459 on 332x848 texture) */}
-                <group ref={rightHandleRef} position={[-doorWidth / 2 - 0.357, -0.099, 0.14]}>
+                <group ref={rightHandleRef} position={[-doorWidth / 2 - 0.357, -0.099, 0.10]}>
                     <mesh position={[0.357, 0.099, 0]}>
                         <planeGeometry args={[doorWidth, doorHeight]} />
                         <meshStandardMaterial
