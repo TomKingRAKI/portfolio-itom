@@ -1,0 +1,89 @@
+// =============================================================================
+// PRELOADER STYLES - Awwwards 2025 Level
+// =============================================================================
+
+@use 'variables' as *;
+@use 'mixins' as *;
+
+.preloader {
+    @include fullscreen;
+    @include flex-column-center;
+    z-index: $z-preloader;
+    background-color: $color-white;
+
+    // Content wrapper
+    &__content {
+        @include flex-column-center;
+        gap: 1.5rem;
+    }
+
+    // Logo
+    &__logo {
+        display: flex;
+        align-items: center;
+        font-size: clamp(3rem, 8vw, 5rem);
+        font-family: $font-title;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        color: $color-black;
+    }
+
+    &__logo-accent {
+        color: $color-neon-green;
+    }
+
+    // Progress percentage
+    &__progress {
+        margin-top: 1rem;
+    }
+
+    &__percent {
+        font-family: $font-primary;
+        font-size: clamp(1rem, 3vw, 1.4rem);
+        font-weight: 300;
+        color: #666;
+        letter-spacing: 0.1em;
+    }
+
+    // Loading text
+    &__text {
+        font-family: $font-handwritten;
+        font-size: clamp(1.2rem, 3vw, 1.6rem);
+        color: #888;
+        min-height: 2em;
+        text-align: center;
+    }
+
+    // Progress bar
+    &__bar {
+        width: clamp(150px, 40vw, 250px);
+        height: 2px;
+        background: #eee;
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+
+    &__bar-fill {
+        width: 100%;
+        height: 100%;
+        background: $color-neon-green;
+        transform-origin: left;
+        transition: transform 0.3s ease-out;
+    }
+}
+
+// Pulse animation for dots
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}

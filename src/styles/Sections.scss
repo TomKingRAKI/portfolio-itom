@@ -1,0 +1,680 @@
+// =============================================================================
+// SECTIONS STYLES - All Sections
+// =============================================================================
+
+@use 'variables' as *;
+@use 'mixins' as *;
+
+// =============================================================================
+// BASE SECTION STYLES
+// =============================================================================
+
+.section {
+    min-height: 100vh;
+    padding: 6rem 2rem;
+    position: relative;
+    overflow: hidden;
+
+    @include mobile {
+        padding: 4rem 1rem;
+    }
+
+    &__container {
+        max-width: 1200px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    &__header {
+        text-align: center;
+        margin-bottom: 4rem;
+    }
+
+    &__title {
+        font-family: $font-primary;
+        font-size: clamp(2.5rem, 6vw, 4rem);
+        font-weight: 700;
+        color: $color-black;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+    }
+
+    &__title-icon {
+        color: $color-neon-green;
+        font-size: 0.8em;
+    }
+
+    &__subtitle {
+        font-family: $font-handwritten;
+        font-size: clamp(1.2rem, 3vw, 1.6rem);
+        color: #666;
+    }
+
+    &__underline {
+        width: 200px;
+        height: 10px;
+        margin: 1rem auto 0;
+    }
+}
+
+// =============================================================================
+// GALLERY SECTION
+// =============================================================================
+
+.section--gallery {
+    background: linear-gradient(180deg, #fefefe 0%, #f8f8f8 100%);
+}
+
+.gallery {
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2.5rem;
+        padding: 2rem 0;
+    }
+
+    &__card {
+        background: var(--bg-color, #f5f5f5);
+        border: 2px solid $color-black;
+        border-radius: 4px;
+        padding: 1.5rem;
+        position: relative;
+        transform: rotate(var(--rotation, 0deg));
+        transition: all 0.3s ease;
+        cursor: pointer;
+
+        &:hover {
+            transform: rotate(0deg) translateY(-8px);
+            box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.1);
+        }
+    }
+
+    &__pin {
+        position: absolute;
+        top: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 16px;
+        height: 16px;
+        background: $color-black;
+        border-radius: 50%;
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 6px;
+            height: 6px;
+            background: $color-neon-green;
+            border-radius: 50%;
+        }
+    }
+
+    &__image {
+        aspect-ratio: 4/3;
+        background: #fff;
+        border: 1px dashed #ccc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+
+    &__image-placeholder {
+        font-size: 3rem;
+        color: #ddd;
+    }
+
+    &__info {
+        text-align: center;
+    }
+
+    &__category {
+        font-family: $font-handwritten;
+        font-size: 0.9rem;
+        color: #888;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    &__title {
+        font-family: $font-primary;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: $color-black;
+    }
+
+    &__tape {
+        position: absolute;
+        top: -12px;
+        right: 20px;
+        width: 50px;
+        height: 20px;
+        background: rgba(255, 255, 200, 0.8);
+        transform: rotate(15deg);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    &__view-all {
+        display: block;
+        text-align: center;
+        font-family: $font-handwritten;
+        font-size: 1.3rem;
+        color: $color-black;
+        margin-top: 3rem;
+        padding: 1rem;
+        transition: color 0.3s;
+
+        &:hover {
+            color: $color-neon-green;
+        }
+    }
+}
+
+// =============================================================================
+// STUDIO SECTION
+// =============================================================================
+
+.section--studio {
+    background: #fafafa;
+}
+
+.studio {
+    &__content {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 4rem;
+        align-items: center;
+
+        @include mobile {
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+    }
+
+    &__tv {
+        display: flex;
+        justify-content: center;
+    }
+
+    &__tv-frame {
+        position: relative;
+        background: $color-white;
+        border: 4px solid $color-black;
+        border-radius: 12px;
+        padding: 1.5rem;
+        width: 100%;
+        max-width: 450px;
+    }
+
+    &__tv-corner {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border: 3px solid $color-black;
+
+        &--tl {
+            top: -5px;
+            left: -5px;
+            border-right: none;
+            border-bottom: none;
+            border-radius: 4px 0 0 0;
+        }
+
+        &--tr {
+            top: -5px;
+            right: -5px;
+            border-left: none;
+            border-bottom: none;
+            border-radius: 0 4px 0 0;
+        }
+
+        &--bl {
+            bottom: -5px;
+            left: -5px;
+            border-right: none;
+            border-top: none;
+            border-radius: 0 0 0 4px;
+        }
+
+        &--br {
+            bottom: -5px;
+            right: -5px;
+            border-left: none;
+            border-top: none;
+            border-radius: 0 0 4px 0;
+        }
+    }
+
+    &__screen {
+        aspect-ratio: 16/9;
+        background: linear-gradient(135deg, #1a1a1a 0%, #333 100%);
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s;
+
+        &:hover {
+            background: linear-gradient(135deg, #222 0%, #444 100%);
+
+            .studio__play-button {
+                transform: scale(1.1);
+                color: $color-neon-green;
+            }
+        }
+    }
+
+    &__play-button {
+        font-size: 3rem;
+        color: $color-white;
+        transition: all 0.3s;
+    }
+
+    &__screen-text {
+        color: rgba(255, 255, 255, 0.6);
+        font-family: $font-handwritten;
+        margin-top: 0.5rem;
+    }
+
+    &__tv-stand {
+        width: 80px;
+        height: 8px;
+        background: $color-black;
+        border-radius: 4px;
+        margin: 1rem auto 0;
+    }
+
+    &__playlists {
+        padding: 1rem;
+    }
+
+    &__playlists-title {
+        font-family: $font-handwritten;
+        font-size: 1.4rem;
+        color: #666;
+        margin-bottom: 1.5rem;
+    }
+
+    &__playlist-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: var(--playlist-color, #f5f5f5);
+        border: 2px solid $color-black;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        cursor: pointer;
+        transition: all 0.3s;
+
+        &:hover {
+            transform: translateX(8px);
+        }
+    }
+
+    &__playlist-icon {
+        font-size: 1.5rem;
+    }
+
+    &__playlist-name {
+        font-weight: 600;
+        display: block;
+    }
+
+    &__playlist-count {
+        font-size: 0.85rem;
+        color: #666;
+    }
+
+    &__channel-link {
+        display: block;
+        font-family: $font-handwritten;
+        font-size: 1.1rem;
+        color: $color-black;
+        margin-top: 1.5rem;
+        transition: color 0.3s;
+
+        &:hover {
+            color: $color-neon-green;
+        }
+    }
+}
+
+// =============================================================================
+// DEV DIARY SECTION
+// =============================================================================
+
+.section--diary {
+    background: linear-gradient(180deg, #f8f8f8 0%, #fefefe 100%);
+}
+
+.diary {
+    &__spine {
+        position: absolute;
+        left: 2rem;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+
+        @include mobile {
+            display: none;
+        }
+    }
+
+    &__ring {
+        width: 30px;
+        height: 30px;
+        border: 4px solid #ccc;
+        border-radius: 50%;
+        background: #f5f5f5;
+    }
+
+    &__entries {
+        display: grid;
+        gap: 2rem;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    &__entry {
+        background: $color-white;
+        border: 2px solid $color-black;
+        border-radius: 4px;
+        padding: 2rem;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s;
+
+        &:hover {
+            transform: translateY(-4px);
+            box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.08);
+        }
+    }
+
+    &__lines {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(transparent 0px,
+                transparent 28px,
+                #e8e8e8 28px,
+                #e8e8e8 30px);
+        opacity: 0.5;
+    }
+
+    &__content {
+        position: relative;
+        z-index: 1;
+    }
+
+    &__meta {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    &__date {
+        font-family: $font-handwritten;
+        color: #888;
+    }
+
+    &__category {
+        font-size: 0.8rem;
+        color: $color-neon-green;
+        background: rgba(57, 255, 20, 0.1);
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        font-weight: 500;
+    }
+
+    &__title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: $color-black;
+    }
+
+    &__excerpt {
+        color: #666;
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+    }
+
+    &__read-more {
+        font-family: $font-handwritten;
+        color: $color-black;
+        font-size: 1rem;
+        transition: color 0.3s;
+
+        &:hover {
+            color: $color-neon-green;
+        }
+    }
+
+    &__fold {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 30px;
+        height: 30px;
+        background: linear-gradient(135deg, transparent 50%, #f0f0f0 50%);
+        border-left: 1px solid #ddd;
+        border-top: 1px solid #ddd;
+    }
+
+    &__view-all {
+        display: block;
+        text-align: center;
+        font-family: $font-handwritten;
+        font-size: 1.3rem;
+        color: $color-black;
+        margin-top: 3rem;
+        transition: color 0.3s;
+
+        &:hover {
+            color: $color-neon-green;
+        }
+    }
+}
+
+// =============================================================================
+// CONNECT SECTION
+// =============================================================================
+
+.section--connect {
+    background: #fefefe;
+}
+
+.connect {
+    &__content {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 4rem;
+        align-items: start;
+
+        @include mobile {
+            grid-template-columns: 1fr;
+            gap: 3rem;
+        }
+    }
+
+    &__card {
+        background: #fffef5;
+        border: 3px solid $color-black;
+        border-radius: 4px;
+        padding: 2.5rem;
+        position: relative;
+        box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.08);
+    }
+
+    &__stamp {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 50px;
+        height: 60px;
+        border: 2px dashed #999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: #999;
+    }
+
+    &__postmark {
+        position: absolute;
+        top: 1.5rem;
+        right: 5rem;
+        font-family: $font-handwritten;
+        font-size: 1.2rem;
+        color: rgba(0, 0, 0, 0.15);
+        transform: rotate(-15deg);
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        padding: 0.25rem 0.5rem;
+        border-radius: 50%;
+    }
+
+    &__form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    &__field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    &__label {
+        font-family: $font-handwritten;
+        font-size: 1.1rem;
+        color: #666;
+    }
+
+    &__input,
+    &__textarea {
+        font-family: $font-primary;
+        font-size: 1rem;
+        padding: 0.75rem 1rem;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        background: $color-white;
+        transition: all 0.3s;
+
+        &:focus {
+            outline: none;
+            border-color: $color-neon-green;
+        }
+    }
+
+    &__textarea {
+        resize: vertical;
+        min-height: 100px;
+    }
+
+    &__submit {
+        font-family: $font-handwritten;
+        font-size: 1.2rem;
+        padding: 1rem 2rem;
+        background: $color-black;
+        color: $color-white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s;
+        align-self: flex-start;
+
+        &:hover {
+            background: $color-neon-green;
+            color: $color-black;
+        }
+    }
+
+    &__socials {
+        padding: 1rem;
+    }
+
+    &__socials-title {
+        font-family: $font-handwritten;
+        font-size: 1.3rem;
+        color: #666;
+        margin-bottom: 1.5rem;
+    }
+
+    &__social-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    &__social-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: #f5f5f5;
+        border: 2px solid $color-black;
+        border-radius: 8px;
+        transition: all 0.3s;
+
+        &:hover {
+            background: $color-black;
+            color: $color-white;
+            transform: translateY(-4px);
+
+            .connect__social-icon {
+                color: $color-neon-green;
+            }
+        }
+    }
+
+    &__social-icon {
+        font-size: 1.3rem;
+        transition: color 0.3s;
+    }
+
+    &__social-label {
+        font-weight: 500;
+    }
+
+    &__email {
+        display: block;
+        font-family: $font-handwritten;
+        font-size: 1.2rem;
+        color: $color-black;
+        margin-top: 2rem;
+        text-align: center;
+        padding: 1rem;
+        border-top: 2px dashed #ddd;
+        transition: color 0.3s;
+
+        &:hover {
+            color: $color-neon-green;
+        }
+    }
+
+    &__footer {
+        text-align: center;
+        margin-top: 4rem;
+        padding-top: 2rem;
+        border-top: 1px solid #eee;
+    }
+
+    &__copyright {
+        font-family: $font-handwritten;
+        color: #999;
+        font-size: 1rem;
+    }
+}

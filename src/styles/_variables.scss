@@ -1,0 +1,37 @@
+// =============================================================================
+// DESIGN TOKENS - ITom Portfolio
+// =============================================================================
+
+// Colors
+$color-white: #FFFFFF;
+$color-black: #0A0A0A;
+$color-gray: #1A1A1A;
+$color-neon-green: #39FF14;
+
+// Typography
+$font-title: 'Gloria Hallelujah', cursive;
+$font-handwritten: 'Caveat', cursive;
+$font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+// Breakpoints
+$breakpoint-mobile: 480px;
+$breakpoint-tablet: 768px;
+$breakpoint-desktop: 1024px;
+$breakpoint-wide: 1440px;
+
+// Z-index layers
+$z-preloader: 100;
+$z-canvas: 1;
+$z-ui: 50;
+
+// Transitions
+$transition-fast: 0.2s ease;
+$transition-normal: 0.4s ease;
+$transition-slow: 0.8s ease;
+
+// Spacing
+$spacing-xs: 0.5rem;
+$spacing-sm: 1rem;
+$spacing-md: 2rem;
+$spacing-lg: 4rem;
+$spacing-xl: 8rem;
