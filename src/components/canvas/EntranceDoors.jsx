@@ -6,6 +6,45 @@ import gsap from 'gsap';
 // Use same font as App.jsx preload
 const FONT_URL = 'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff';
 
+const NeonArrow = ({ position }) => {
+    const arrowRef = useRef();
+
+    useFrame((state) => {
+        if (arrowRef.current) {
+            // Bobbing animation
+            arrowRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 2) * 0.1;
+        }
+    });
+
+    return (
+        <group ref={arrowRef} position={position}>
+            <Text
+                font={FONT_URL}
+                fontSize={0.6} // Large and visible
+                color="#39FF14"
+                anchorX="center"
+                anchorY="middle"
+                outlineWidth={0.02}
+                outlineColor="#1a1a1a"
+            >
+                ↓
+            </Text>
+            {/* Glow effect duplicate */}
+            <Text
+                font={FONT_URL}
+                position={[0, 0, -0.02]}
+                fontSize={0.6}
+                color="#39FF14"
+                fillOpacity={0.5}
+                anchorX="center"
+                anchorY="middle"
+            >
+                ↓
+            </Text>
+        </group>
+    );
+};
+
 /**
  * EntranceDoors Component - 3D Entrance to the Corridor
  * 
@@ -165,28 +204,9 @@ const EntranceDoors = ({
                 </mesh>
             </group>
 
-            {/* FLOATING LABEL */}
+            {/* FLOATING ARROW GUIDE */}
             {!isOpen && (
-                <group position={[0, doorBottomY + doorHeight + 0.5, 0.4]}>
-                    <Text
-                        font={FONT_URL}
-                        fontSize={0.18}
-                        color="#1a1a1a"
-                        anchorX="center"
-                        anchorY="middle"
-                    >
-                        CLICK TO ENTER
-                    </Text>
-                    <Text
-                        font={FONT_URL}
-                        position={[0, -0.25, 0]}
-                        fontSize={0.22}
-                        color="#39FF14"
-                        anchorX="center"
-                    >
-                        ▼
-                    </Text>
-                </group>
+                <NeonArrow position={[0, doorBottomY + doorHeight + 0.3, 0.4]} />
             )}
 
             {/* Warm lighting */}

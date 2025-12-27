@@ -64,6 +64,7 @@
 
         circle {
             vector-effect: non-scaling-stroke;
+            will-change: stroke-dashoffset; // Optimize for animation
         }
     }
 }

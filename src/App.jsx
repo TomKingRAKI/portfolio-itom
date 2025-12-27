@@ -1,4 +1,4 @@
-import { useState, Suspense, useEffect } from 'react';
+import { useState, Suspense, useEffect, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Preload, useTexture, Text } from '@react-three/drei';
 
@@ -13,16 +13,16 @@ useTexture.preload('/textures/paper-texture.png');
 
 const FONT_URL = 'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff';
 
-/**
- * App Component - ITom's Creative House
- * 
- * Flow:
- * 1. 2D Preloader shows while loading
- * 2. Preloader fades -> 3D entrance doors visible
- * 3. Click doors -> fly through -> corridor experience
- */
 function App() {
   const [isLoaded, setIsLoaded] = useState(false);
+  const [sceneReady, setSceneReady] = useState(false);
+
+  const handleSceneReady = useCallback(() => {
+    // Small delay to ensure the first frame is actually painted
+    requestAnimationFrame(() => {
+      setSceneReady(true);
+    });
+  }, []);
 
   return (
     <div className="app">
@@ -30,7 +30,7 @@ function App() {
       <div className="canvas-wrapper">
         <Canvas
           camera={{
-            position: [0, 0.2, 28], // Start in front of entrance doors at Z=22
+            position: [0, 0.2, 28],
             fov: 60,
             near: 0.1,
             far: 150
@@ -42,15 +42,11 @@ function App() {
           }}
           dpr={[1, 2]}
         >
-          {/* White background */}
           <color attach="background" args={['#fafafa']} />
-
-          {/* Fog for depth */}
           <fog attach="fog" args={['#fafafa', 15, 50]} />
 
           <Suspense fallback={null}>
-            <Experience isLoaded={isLoaded} />
-            {/* Force font load */}
+            <Experience isLoaded={isLoaded} onSceneReady={handleSceneReady} />
             <Text font={FONT_URL} visible={false}>preload</Text>
             <Preload all />
           </Suspense>
@@ -61,10 +57,7 @@ function App() {
       <div className="ui-overlay">
         {isLoaded && (
           <>
-            <div className="scroll-hint">
-              <span className="scroll-hint__text">Scroll to explore</span>
-              <span className="scroll-hint__arrow">↓</span>
-            </div>
+            {/* Scroll hint removed - consolidated into 3D arrow */}
             <div className="instructions">
               <p>🖱️ Scroll to walk • Click doors to enter</p>
             </div>
@@ -73,7 +66,10 @@ function App() {
       </div>
 
       {/* 2D Preloader */}
-      <Preloader onComplete={() => setIsLoaded(true)} />
+      <Preloader
+        ready={sceneReady}
+        onComplete={() => setIsLoaded(true)}
+      />
     </div>
   );
 }

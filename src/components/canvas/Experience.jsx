@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 
 import InfiniteCorridorManager from './InfiniteCorridorManager';
@@ -21,11 +21,16 @@ const ENTRANCE_DOORS_Z = 22;
  * 2. Click doors -> they open + camera flies through
  * 3. Behind doors: infinite corridor with ITOM
  */
-const Experience = ({ isLoaded }) => {
+const Experience = ({ isLoaded, onSceneReady }) => {
     const [hasEntered, setHasEntered] = useState(false);
     const [currentRoom, setCurrentRoom] = useState(null);
     const [cameraZ, setCameraZ] = useState(28);
     const { camera } = useThree();
+
+    // Signal ready on mount (after texture load + initial render)
+    useEffect(() => {
+        onSceneReady?.();
+    }, [onSceneReady]);
 
     // Camera control - only works after entering
     useInfiniteCamera({

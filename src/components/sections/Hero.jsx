@@ -35,11 +35,7 @@ const Hero = ({ isRevealed }) => {
                 </Canvas>
             </div>
 
-            {/* Scroll indicator */}
-            <div className="hero__scroll-indicator">
-                <span className="hero__scroll-text">Scroll to explore</span>
-                <div className="hero__scroll-arrow">↓</div>
-            </div>
+            {/* Scroll indicator removed - consolidated into 3D arrow */}
         </section>
     );
 };
