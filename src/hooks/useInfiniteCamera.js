@@ -15,6 +15,7 @@ const DOOR_POSITIONS = [
  * 
  * When disabled: does NOT touch camera at all (GSAP can control it)
  * When enabled: takes over camera control with scroll/parallax
+ * Supports: desktop (mouse/wheel) + mobile (touch/gyroscope)
  */
 const useInfiniteCamera = ({
     segmentLength = 80,
@@ -32,9 +33,14 @@ const useInfiniteCamera = ({
     const parallax = useRef({ x: 0, y: 0 });
     const targetParallax = useRef({ x: 0, y: 0 });
     const glanceOffset = useRef(0);
+    const targetGlance = useRef(0); // For door hover glance
     const currentSegment = useRef(0);
     const enabledRef = useRef(enabled);
     const justEnabled = useRef(false);
+
+    // Mobile touch tracking
+    const touchStart = useRef({ y: 0 });
+    const useGyroscope = useRef(false);
 
     // Update enabled ref
     useEffect(() => {
@@ -53,7 +59,7 @@ const useInfiniteCamera = ({
         }
     }, [enabled, camera]);
 
-    // Handle wheel scroll
+    // Handle wheel scroll (desktop)
     const handleWheel = useCallback((e) => {
         if (!enabledRef.current) return;
 
@@ -62,7 +68,7 @@ const useInfiniteCamera = ({
         targetZ.current -= delta;
     }, [scrollSpeed]);
 
-    // Handle mouse parallax
+    // Handle mouse parallax (desktop)
     const handleMouseMove = useCallback((e) => {
         if (!enabledRef.current) return;
 
@@ -70,15 +76,97 @@ const useInfiniteCamera = ({
         targetParallax.current.y = -((e.clientY / window.innerHeight) * 2 - 1) * parallaxIntensity * 0.5;
     }, [parallaxIntensity]);
 
+    // Handle touch start (mobile)
+    const handleTouchStart = useCallback((e) => {
+        if (!enabledRef.current) return;
+        touchStart.current.y = e.touches[0].clientY;
+    }, []);
+
+    // Handle touch move (mobile scroll)
+    const handleTouchMove = useCallback((e) => {
+        if (!enabledRef.current) return;
+
+        const currentY = e.touches[0].clientY;
+        const delta = (touchStart.current.y - currentY) * scrollSpeed * 1.5; // 1.5x for better mobile feel
+        targetZ.current -= delta;
+        touchStart.current.y = currentY;
+    }, [scrollSpeed]);
+
+    // Handle device orientation (gyroscope for mobile parallax)
+    const handleDeviceOrientation = useCallback((e) => {
+        if (!enabledRef.current || !useGyroscope.current) return;
+
+        // gamma: left-to-right tilt (-90 to 90)
+        // beta: front-to-back tilt (-180 to 180), 45 is roughly "holding phone naturally"
+        const gamma = e.gamma || 0;
+        const beta = e.beta || 0;
+
+        // Clamp values and convert to parallax
+        const clampedGamma = Math.max(-45, Math.min(45, gamma));
+        const clampedBeta = Math.max(0, Math.min(90, beta)) - 45; // Center around 45 degrees
+
+        targetParallax.current.x = (clampedGamma / 45) * parallaxIntensity;
+        targetParallax.current.y = -(clampedBeta / 45) * parallaxIntensity * 0.5;
+    }, [parallaxIntensity]);
+
+    // Request gyroscope permission (iOS 13+)
+    const requestGyroscopePermission = useCallback(async () => {
+        if (typeof DeviceOrientationEvent !== 'undefined' &&
+            typeof DeviceOrientationEvent.requestPermission === 'function') {
+            try {
+                const permission = await DeviceOrientationEvent.requestPermission();
+                if (permission === 'granted') {
+                    useGyroscope.current = true;
+                    window.addEventListener('deviceorientation', handleDeviceOrientation);
+                }
+            } catch (error) {
+                console.log('Gyroscope permission denied');
+            }
+        } else {
+            // Non-iOS or older browsers - just add listener
+            useGyroscope.current = true;
+            window.addEventListener('deviceorientation', handleDeviceOrientation);
+        }
+    }, [handleDeviceOrientation]);
+
+    // Handle door hover events (dispatched from Door.jsx)
     useEffect(() => {
+        const handleDoorHover = (e) => {
+            if (!enabledRef.current) return;
+            // e.detail.direction: 'left', 'right', or null (leave)
+            if (e.detail.direction === 'left') {
+                targetGlance.current = -glanceIntensity * 0.5; // Very subtle turn
+            } else if (e.detail.direction === 'right') {
+                targetGlance.current = glanceIntensity * 0.5; // Very subtle turn
+            } else {
+                targetGlance.current = 0;
+            }
+        };
+
+        window.addEventListener('doorHover', handleDoorHover);
+        return () => window.removeEventListener('doorHover', handleDoorHover);
+    }, [glanceIntensity]);
+
+    useEffect(() => {
+        // Desktop events
         window.addEventListener('wheel', handleWheel, { passive: false });
         window.addEventListener('mousemove', handleMouseMove);
+
+        // Mobile events
+        window.addEventListener('touchstart', handleTouchStart, { passive: true });
+        window.addEventListener('touchmove', handleTouchMove, { passive: true });
+
+        // Try to enable gyroscope (will work on Android, need permission on iOS)
+        requestGyroscopePermission();
 
         return () => {
             window.removeEventListener('wheel', handleWheel);
             window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('touchstart', handleTouchStart);
+            window.removeEventListener('touchmove', handleTouchMove);
+            window.removeEventListener('deviceorientation', handleDeviceOrientation);
         };
-    }, [handleWheel, handleMouseMove]);
+    }, [handleWheel, handleMouseMove, handleTouchStart, handleTouchMove, handleDeviceOrientation, requestGyroscopePermission]);
 
     // Main camera update loop
     useFrame(() => {
@@ -100,30 +188,17 @@ const useInfiniteCamera = ({
             justEnabled.current = false;
         }
 
-        // Calculate segment position for auto-glance
-        const posInSegment = ((10 - currentZ.current) % segmentLength + segmentLength) % segmentLength;
-
-        // Auto-glance at doors
-        let targetGlance = 0;
-        for (const door of DOOR_POSITIONS) {
-            const doorPosInSegment = -door.z;
-            const distToDoor = Math.abs(posInSegment - doorPosInSegment);
-
-            if (distToDoor < 10) {
-                const glanceStrength = 1 - (distToDoor / 10);
-                targetGlance = door.side === 'left' ? -glanceIntensity * glanceStrength : glanceIntensity * glanceStrength;
-                break;
-            }
-        }
-        glanceOffset.current = THREE.MathUtils.lerp(glanceOffset.current, targetGlance, 0.05);
+        // Glance toward doors on hover (targetGlance set by doorHover events)
+        // Very slow lerp for smooth transition
+        glanceOffset.current = THREE.MathUtils.lerp(glanceOffset.current, targetGlance.current, 0.04);
 
         // Apply to camera
         camera.position.z = currentZ.current;
         camera.position.x = parallax.current.x;
         camera.position.y = 0.2 + parallax.current.y;
 
-        // Look direction with glance
-        const lookX = parallax.current.x * 0.3 + glanceOffset.current * 8;
+        // Look direction with glance - reduced multiplier for subtle effect
+        const lookX = parallax.current.x * 0.3 + glanceOffset.current * 3;
         camera.lookAt(lookX, 0.13 + parallax.current.y, currentZ.current - 10);
 
         // Update segment tracking
@@ -135,8 +210,10 @@ const useInfiniteCamera = ({
 
     return {
         getCurrentSegment: () => currentSegment.current,
-        getCameraZ: () => currentZ.current
+        getCameraZ: () => currentZ.current,
+        requestGyroscopePermission // Expose for UI button (iOS needs user interaction)
     };
 };
 
 export default useInfiniteCamera;
+

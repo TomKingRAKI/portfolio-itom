@@ -10,7 +10,7 @@
     @include flex-column-center;
     z-index: $z-preloader;
     background-color: $color-white;
-    background-image: url('/textures/paper-texture.png');
+    background-image: url('/textures/paper-texture.webp');
     background-size: cover;
     background-position: center;
     background-blend-mode: multiply;

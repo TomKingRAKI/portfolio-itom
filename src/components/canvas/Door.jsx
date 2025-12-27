@@ -202,8 +202,14 @@ const Door = ({
                 <mesh
                     position={[side === 'left' ? doorWidth / 2 : -doorWidth / 2, 0, 0.02]}
                     onClick={handleClick}
-                    onPointerEnter={() => setIsHovered(true)}
-                    onPointerLeave={() => setIsHovered(false)}
+                    onPointerEnter={() => {
+                        setIsHovered(true);
+                        window.dispatchEvent(new CustomEvent('doorHover', { detail: { direction: side } }));
+                    }}
+                    onPointerLeave={() => {
+                        setIsHovered(false);
+                        window.dispatchEvent(new CustomEvent('doorHover', { detail: { direction: null } }));
+                    }}
                 >
                     <planeGeometry args={[doorWidth, doorHeight]} />
                     <meshStandardMaterial color={isHovered ? '#ebe5d8' : color} roughness={0.85} />
