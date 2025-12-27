@@ -65,18 +65,18 @@ const EntranceDoors = ({
     const [isAnimating, setIsAnimating] = useState(false);
     const { camera } = useThree();
 
-    // Door dimensions
-    const doorWidth = 1.4;
+    // Door dimensions - matching SegmentDoors
+    const doorWidth = 1.05;
     const doorOpeningWidth = doorWidth * 2;
-    const doorHeight = 2.8;
-    const wallThickness = 0.15;
+    const doorHeight = 2.4;
+    const wallThickness = 0.12;
 
     const floorY = -corridorHeight / 2;
     const doorBottomY = floorY;
     const doorCenterY = doorBottomY + doorHeight / 2;
     const wallCenterY = floorY + corridorHeight / 2;
     const topWallHeight = corridorHeight - doorHeight;
-    const topWallCenterY = floorY + doorHeight + topWallHeight / 2;
+    const topWallCenterY = doorBottomY + doorHeight + topWallHeight / 2;
     const sideWallWidth = (corridorWidth - doorOpeningWidth) / 2;
 
     // Handle click
@@ -93,16 +93,16 @@ const EntranceDoors = ({
             }
         });
 
-        // Open doors
+        // Open doors - smoother angle (matches SegmentDoors)
         tl.to(leftDoorRef.current.rotation, {
-            y: -Math.PI * 0.75,
-            duration: 0.7,
+            y: -Math.PI * 0.55,
+            duration: 0.9,
             ease: 'power2.out'
         }, 0);
 
         tl.to(rightDoorRef.current.rotation, {
-            y: Math.PI * 0.75,
-            duration: 0.7,
+            y: Math.PI * 0.55,
+            duration: 0.9,
             ease: 'power2.out'
         }, 0);
 
@@ -130,77 +130,81 @@ const EntranceDoors = ({
             </mesh>
 
             {/* TOP WALL PANEL */}
-            {topWallHeight > 0 && (
-                <mesh position={[0, topWallCenterY, 0]}>
-                    <boxGeometry args={[doorOpeningWidth, topWallHeight, wallThickness]} />
-                    <meshStandardMaterial color="#f8f5f0" roughness={0.95} />
-                </mesh>
-            )}
+            <mesh position={[0, topWallCenterY, 0]}>
+                <boxGeometry args={[doorOpeningWidth, topWallHeight, wallThickness]} />
+                <meshStandardMaterial color="#f8f5f0" roughness={0.95} />
+            </mesh>
 
             {/* DOOR FRAME */}
-            <mesh position={[0, doorBottomY + doorHeight + 0.05, 0.04]}>
-                <boxGeometry args={[doorOpeningWidth + 0.12, 0.1, 0.18]} />
+            {/* Top bar */}
+            <mesh position={[0, doorBottomY + doorHeight + 0.04, 0.03]}>
+                <boxGeometry args={[doorOpeningWidth + 0.08, 0.08, 0.14]} />
                 <meshStandardMaterial color="#1a1a1a" />
             </mesh>
-            <mesh position={[-doorOpeningWidth / 2 - 0.03, doorCenterY, 0.04]}>
-                <boxGeometry args={[0.08, doorHeight + 0.1, 0.18]} />
+            {/* Left post */}
+            <mesh position={[-doorOpeningWidth / 2 - 0.02, doorCenterY, 0.03]}>
+                <boxGeometry args={[0.06, doorHeight, 0.14]} />
                 <meshStandardMaterial color="#1a1a1a" />
             </mesh>
-            <mesh position={[doorOpeningWidth / 2 + 0.03, doorCenterY, 0.04]}>
-                <boxGeometry args={[0.08, doorHeight + 0.1, 0.18]} />
+            {/* Right post */}
+            <mesh position={[doorOpeningWidth / 2 + 0.02, doorCenterY, 0.03]}>
+                <boxGeometry args={[0.06, doorHeight, 0.14]} />
                 <meshStandardMaterial color="#1a1a1a" />
             </mesh>
 
             {/* LEFT DOOR */}
             <group ref={leftDoorRef} position={[-doorWidth, doorCenterY, 0]}>
                 <mesh
-                    position={[doorWidth / 2, 0, 0.06]}
+                    position={[doorWidth / 2, 0, 0.05]}
                     onClick={handleClick}
                     onPointerEnter={() => !isOpen && setIsHovered(true)}
                     onPointerLeave={() => setIsHovered(false)}
                 >
-                    <boxGeometry args={[doorWidth, doorHeight, 0.06]} />
+                    <boxGeometry args={[doorWidth, doorHeight - 0.05, 0.05]} />
                     <meshStandardMaterial
-                        color={isHovered ? '#e8e0d2' : '#f0e8dc'}
-                        roughness={0.85}
+                        color={isHovered ? '#e8e0d2' : '#f0e8dc'} // Interaction color
+                        roughness={0.9}
                     />
                 </mesh>
-                <mesh position={[doorWidth / 2, doorHeight * 0.2, 0.1]}>
-                    <planeGeometry args={[doorWidth * 0.65, doorHeight * 0.2]} />
-                    <meshStandardMaterial color="#e5ddd0" roughness={1} />
+                <mesh position={[doorWidth / 2, 0.4, 0.08]}>
+                    <planeGeometry args={[doorWidth * 0.6, doorHeight * 0.25]} />
+                    <meshStandardMaterial color="#e8e0d2" roughness={1} />
                 </mesh>
-                <mesh position={[doorWidth / 2, -doorHeight * 0.15, 0.1]}>
-                    <planeGeometry args={[doorWidth * 0.65, doorHeight * 0.2]} />
-                    <meshStandardMaterial color="#e5ddd0" roughness={1} />
+                <mesh position={[doorWidth / 2, -0.35, 0.08]}>
+                    <planeGeometry args={[doorWidth * 0.6, doorHeight * 0.25]} />
+                    <meshStandardMaterial color="#e8e0d2" roughness={1} />
+                </mesh>
+                <mesh position={[doorWidth - 0.1, 0, 0.1]}>
+                    <sphereGeometry args={[0.04, 10, 10]} />
+                    <meshStandardMaterial color="#222" metalness={0.7} roughness={0.25} />
                 </mesh>
             </group>
 
             {/* RIGHT DOOR */}
             <group ref={rightDoorRef} position={[doorWidth, doorCenterY, 0]}>
                 <mesh
-                    position={[-doorWidth / 2, 0, 0.06]}
+                    position={[-doorWidth / 2, 0, 0.05]}
                     onClick={handleClick}
                     onPointerEnter={() => !isOpen && setIsHovered(true)}
                     onPointerLeave={() => setIsHovered(false)}
                 >
-                    <boxGeometry args={[doorWidth, doorHeight, 0.06]} />
+                    <boxGeometry args={[doorWidth, doorHeight - 0.05, 0.05]} />
                     <meshStandardMaterial
-                        color={isHovered ? '#e8e0d2' : '#f0e8dc'}
-                        roughness={0.85}
+                        color={isHovered ? '#e8e0d2' : '#f0e8dc'} // Interaction color
+                        roughness={0.9}
                     />
                 </mesh>
-                <mesh position={[-doorWidth / 2, doorHeight * 0.2, 0.1]}>
-                    <planeGeometry args={[doorWidth * 0.65, doorHeight * 0.2]} />
-                    <meshStandardMaterial color="#e5ddd0" roughness={1} />
+                <mesh position={[-doorWidth / 2, 0.4, 0.08]}>
+                    <planeGeometry args={[doorWidth * 0.6, doorHeight * 0.25]} />
+                    <meshStandardMaterial color="#e8e0d2" roughness={1} />
                 </mesh>
-                <mesh position={[-doorWidth / 2, -doorHeight * 0.15, 0.1]}>
-                    <planeGeometry args={[doorWidth * 0.65, doorHeight * 0.2]} />
-                    <meshStandardMaterial color="#e5ddd0" roughness={1} />
+                <mesh position={[-doorWidth / 2, -0.35, 0.08]}>
+                    <planeGeometry args={[doorWidth * 0.6, doorHeight * 0.25]} />
+                    <meshStandardMaterial color="#e8e0d2" roughness={1} />
                 </mesh>
-                {/* Handle */}
-                <mesh position={[-doorWidth + 0.15, 0, 0.12]}>
-                    <sphereGeometry args={[0.06, 12, 12]} />
-                    <meshStandardMaterial color="#222" metalness={0.8} roughness={0.2} />
+                <mesh position={[-doorWidth + 0.1, 0, 0.1]}>
+                    <sphereGeometry args={[0.04, 10, 10]} />
+                    <meshStandardMaterial color="#222" metalness={0.7} roughness={0.25} />
                 </mesh>
             </group>
 
