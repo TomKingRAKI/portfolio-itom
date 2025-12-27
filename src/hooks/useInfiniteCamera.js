@@ -39,8 +39,13 @@ const useInfiniteCamera = ({
     const justEnabled = useRef(false);
 
     // Mobile touch tracking
-    const touchStart = useRef({ y: 0 });
+    const touchStart = useRef({ x: 0, y: 0 });
+    const swipeGlance = useRef(0); // Horizontal swipe-based camera rotation
+    const targetSwipeGlance = useRef(0);
     const useGyroscope = useRef(false);
+
+    // Limits for swipe glance (in radians, ~15 degrees each way)
+    const MAX_SWIPE_GLANCE = 0.26;
 
     // Update enabled ref
     useEffect(() => {
@@ -79,18 +84,31 @@ const useInfiniteCamera = ({
     // Handle touch start (mobile)
     const handleTouchStart = useCallback((e) => {
         if (!enabledRef.current) return;
+        touchStart.current.x = e.touches[0].clientX;
         touchStart.current.y = e.touches[0].clientY;
     }, []);
 
-    // Handle touch move (mobile scroll)
+    // Handle touch move (mobile scroll + horizontal glance)
     const handleTouchMove = useCallback((e) => {
         if (!enabledRef.current) return;
 
+        const currentX = e.touches[0].clientX;
         const currentY = e.touches[0].clientY;
-        const delta = (touchStart.current.y - currentY) * scrollSpeed * 1.5; // 1.5x for better mobile feel
-        targetZ.current -= delta;
+
+        // Vertical scroll (original behavior)
+        const deltaY = (touchStart.current.y - currentY) * scrollSpeed * 1.5;
+        targetZ.current -= deltaY;
+
+        // Horizontal swipe -> camera glance (NEW)
+        const deltaX = (touchStart.current.x - currentX) * 0.003; // Subtle multiplier
+        targetSwipeGlance.current += deltaX;
+
+        // Clamp to limits (±15 degrees)
+        targetSwipeGlance.current = Math.max(-MAX_SWIPE_GLANCE, Math.min(MAX_SWIPE_GLANCE, targetSwipeGlance.current));
+
+        touchStart.current.x = currentX;
         touchStart.current.y = currentY;
-    }, [scrollSpeed]);
+    }, [scrollSpeed, MAX_SWIPE_GLANCE]);
 
     // Handle device orientation (gyroscope for mobile parallax)
     const handleDeviceOrientation = useCallback((e) => {
@@ -192,13 +210,16 @@ const useInfiniteCamera = ({
         // Very slow lerp for smooth transition
         glanceOffset.current = THREE.MathUtils.lerp(glanceOffset.current, targetGlance.current, 0.04);
 
+        // Smooth swipe glance (mobile horizontal swipe)
+        swipeGlance.current = THREE.MathUtils.lerp(swipeGlance.current, targetSwipeGlance.current, 0.08);
+
         // Apply to camera
         camera.position.z = currentZ.current;
         camera.position.x = parallax.current.x;
         camera.position.y = 0.2 + parallax.current.y;
 
-        // Look direction with glance - reduced multiplier for subtle effect
-        const lookX = parallax.current.x * 0.3 + glanceOffset.current * 3;
+        // Look direction with glance + swipe glance - reduced multiplier for subtle effect
+        const lookX = parallax.current.x * 0.3 + glanceOffset.current * 3 + swipeGlance.current * 4;
         camera.lookAt(lookX, 0.13 + parallax.current.y, currentZ.current - 10);
 
         // Update segment tracking
