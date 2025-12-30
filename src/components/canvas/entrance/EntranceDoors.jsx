@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Text, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
@@ -29,6 +29,8 @@ const EntranceDoors = ({
     const [isOpen, setIsOpen] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
+    const [isWindowHovered, setIsWindowHovered] = useState(false);
+    const windowAvatarRef = useRef();
     const { camera } = useThree();
     const frameTexture = useTexture('/textures/doors/frame_sketch.webp');
     const doorLeftTexture = useTexture('/textures/doors/door_left_sketch.webp');
@@ -37,8 +39,18 @@ const EntranceDoors = ({
     const handleRightTexture = useTexture('/textures/doors/handle_right_sketch.webp');
     const doorBackTexture = useTexture('/textures/doors/door_back_left_sketch.webp');
     const edgeTexture = useTexture('/textures/doors/pien.webp');
-    const bricksTexture = useTexture('/textures/doors/wall_bricks_2.webp');
-    const stonePathTexture = useTexture('/textures/stone-path.webp');
+    const bricksTexture = useTexture('/textures/entrance/wall_bricks_2.webp');
+    const stonePathTexture = useTexture('/textures/entrance/stone-path.webp');
+    // const catTexture = useTexture('/textures/entrance/cat_sketch.png'); // Old side cat
+    const catFrontBodyTexture = useTexture('/textures/entrance/cat_front_body.png');
+    const windowSketchTexture = useTexture('/textures/entrance/window_sketch.png');
+    const avatarWindowTexture = useTexture('/textures/entrance/avatar_window.png');
+    const avatarTexture = useTexture('/images/avatar-happy.png');
+
+    // Cat Ref
+    const leftPupilRef = useRef();
+    const rightPupilRef = useRef();
+    const catGroupRef = useRef(); // To get world position for tracking
 
     // Door dimensions - calculated from texture proportions (332x848 = 1:2.55)
     // Door dimensions - calculated from texture proportions (332x848 = 1:2.55)
@@ -59,6 +71,11 @@ const EntranceDoors = ({
     const topWallHeight = corridorHeight - doorHeight;
     const topWallCenterY = doorBottomY + doorHeight + topWallHeight / 2;
     const sideWallWidth = (corridorWidth - doorOpeningWidth) / 2;
+
+
+
+    // Cat Interaction State
+
 
     // Handle click
     const handleClick = (e) => {
@@ -181,42 +198,70 @@ const EntranceDoors = ({
         }
     };
 
-    // Generate Vignette Alpha Map for fading edges
-    const alphaMap = useMemo(() => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
-        const ctx = canvas.getContext('2d');
 
-        // 1. Horizontal Gradient (Fade Sides)
-        // Black (Transparent) -> White (Opaque) -> Black (Transparent)
-        const gH = ctx.createLinearGradient(0, 0, 512, 0);
-        gH.addColorStop(0, 'black');
-        gH.addColorStop(0.2, 'white'); // Fade in from left (20%)
-        gH.addColorStop(0.8, 'white'); // Start fading out to right (at 80%)
-        gH.addColorStop(1, 'black');
 
-        ctx.fillStyle = gH;
-        ctx.fillRect(0, 0, 512, 512);
+    // --- Cat Eye Tracking Logic ---
+    useFrame((state) => {
+        if (!leftPupilRef.current || !rightPupilRef.current) return;
 
-        // 2. Vertical Gradient (Fade Top)
-        // Multiply with Horizontal to combine fades
-        ctx.globalCompositeOperation = 'multiply';
+        // Mouse position in normalized device reference (-1 to +1)
+        const { x, y } = state.pointer;
 
-        const gV = ctx.createLinearGradient(0, 0, 0, 512);
-        gV.addColorStop(0, 'black');
-        gV.addColorStop(0.4, 'white'); // Fade in from top (40%)
-        gV.addColorStop(1, 'white');   // Bottom is fully opaque
+        // Configuration
+        const MAX_EYE_MOVEMENT = 0.015; // How far pupils can move from center
 
-        ctx.fillStyle = gV;
-        ctx.fillRect(0, 0, 512, 512);
+        // Simple mapping
+        const targetX = x * MAX_EYE_MOVEMENT * 2;
+        const targetY = y * MAX_EYE_MOVEMENT * 2;
 
-        // Reset composite
-        ctx.globalCompositeOperation = 'source-over';
+        // Smoothly interpolate current pupil position to target
+        // Left Eye Original: [-0.063, 0.27]
+        leftPupilRef.current.position.x = THREE.MathUtils.lerp(leftPupilRef.current.position.x, -0.075 + targetX, 0.1);
+        leftPupilRef.current.position.y = THREE.MathUtils.lerp(leftPupilRef.current.position.y, 0.28 + targetY, 0.1);
 
-        const texture = new THREE.CanvasTexture(canvas);
-        return texture;
-    }, []);
+        // Right Eye Original: [0.0615, 0.27]
+        rightPupilRef.current.position.x = THREE.MathUtils.lerp(rightPupilRef.current.position.x, 0.043 + targetX, 0.1);
+        rightPupilRef.current.position.y = THREE.MathUtils.lerp(rightPupilRef.current.position.y, 0.28 + targetY, 0.1);
+    });
+
+    // Helper for window hover
+    const handleWindowEnter = (e) => {
+        e.stopPropagation();
+        setIsWindowHovered(true);
+        document.body.style.cursor = 'pointer';
+
+        if (windowAvatarRef.current) {
+            gsap.to(windowAvatarRef.current.position, {
+                x: 2.5, // Slide into window position
+                duration: 0.5,
+                ease: 'back.out(1.7)'
+            });
+            gsap.to(windowAvatarRef.current.rotation, {
+                z: 0.1, // Slight tilt
+                duration: 0.5,
+                ease: 'power2.out'
+            });
+        }
+    };
+
+    const handleWindowLeave = (e) => {
+        e.stopPropagation();
+        setIsWindowHovered(false);
+        document.body.style.cursor = 'auto';
+
+        if (windowAvatarRef.current) {
+            gsap.to(windowAvatarRef.current.position, {
+                x: 3.5, // Slide back behind bricks
+                duration: 0.4,
+                ease: 'power2.in'
+            });
+            gsap.to(windowAvatarRef.current.rotation, {
+                z: 0,
+                duration: 0.4,
+                ease: 'power2.in'
+            });
+        }
+    };
 
     // Frame center Y - aligned with doors
     const frameCenterY = doorBottomY + frameHeight / 2;
@@ -268,12 +313,11 @@ const EntranceDoors = ({
                 1. args={[Szerokość, Wysokość]} - Rozmiar obrazka
                 2. facadeYOffset - Przesunięcie góra/dół (np. -1 obniży, 1 podwyższy)
             */}
-            <mesh position={[0, wallCenterY + facadeYOffset, wallThickness / 2 + 0.01]}>
+            <mesh position={[0, wallCenterY + facadeYOffset, 0.15]}>
                 {/* args={[Szerokość, Wysokość]} - Zmieniaj te liczby (np. 7, 8) */}
                 <planeGeometry args={[11., 4.7]} />
                 <meshStandardMaterial
                     map={bricksTexture}
-                    alphaMap={alphaMap}
                     transparent={true}
                     alphaTest={0.01}
                     roughness={0.9}
@@ -398,6 +442,73 @@ const EntranceDoors = ({
                 color="#fff8e8"
                 distance={10}
             />
+            {/* AVATAR - separate from window group, behind bricks */}
+            <mesh
+                ref={windowAvatarRef}
+                position={[3.5, 0, 0.04]}
+                rotation={[0, 0, 0]}
+            >
+                <planeGeometry args={[1.5, 1.5]} />
+                <meshStandardMaterial
+                    map={avatarWindowTexture}
+                    transparent={true}
+                />
+            </mesh>
+
+            {/* WINDOW - positioned to the right of doors */}
+            <group
+                position={[2.5, 0, 0.1]}
+                onPointerEnter={handleWindowEnter}
+                onPointerLeave={handleWindowLeave}
+            >
+                {/* Window Frame Sketch - in front of bricks */}
+                <mesh position={[0, 0, 0.2]}>
+                    <planeGeometry args={[1.5, 1.5]} />
+                    <meshStandardMaterial
+                        map={windowSketchTexture}
+                        transparent={true}
+                    />
+                </mesh>
+            </group>
+
+
+
+
+
+            {/* CAT SKETCH (Front Facing) */}
+            <group position={[-1.5, floorY + 0.6, 0.8]} ref={catGroupRef}>
+                {/* Body */}
+                <mesh>
+                    <planeGeometry args={[1.5, 1.5]} />
+                    <meshStandardMaterial
+                        map={catFrontBodyTexture}
+                        transparent={true}
+                        blending={THREE.MultiplyBlending}
+                        depthWrite={false}
+                    />
+                </mesh>
+
+                {/* Left Pupil */}
+                <mesh
+                    ref={leftPupilRef}
+                    position={[-0.063, 0.27, -0.02]} // Behind cat
+                >
+                    <circleGeometry args={[0.020, 32]} />
+                    <meshBasicMaterial color="black" />
+                    {/* Oval Scale */}
+                    <group scale={[0.8, 1.2, 1]} />
+                </mesh>
+
+                {/* Right Pupil */}
+                <mesh
+                    ref={rightPupilRef}
+                    position={[0.0615, 0.27, -0.02]} // Behind cat
+                >
+                    <circleGeometry args={[0.020, 32]} />
+                    <meshBasicMaterial color="black" />
+                </mesh>
+            </group>
+
         </group>
     );
 };

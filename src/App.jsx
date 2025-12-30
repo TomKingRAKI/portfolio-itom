@@ -51,7 +51,8 @@ function App() {
           gl={{
             antialias: true,
             alpha: false,
-            powerPreference: 'high-performance'
+            powerPreference: 'high-performance',
+            localClippingEnabled: true
           }}
           dpr={dpr}
         >

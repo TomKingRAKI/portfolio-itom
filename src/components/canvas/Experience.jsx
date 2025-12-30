@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 
-import InfiniteCorridorManager from './InfiniteCorridorManager';
-import EntranceDoors from './EntranceDoors';
-import EmptyCorridor from './EmptyCorridor';
+import InfiniteCorridorManager from './corridor/InfiniteCorridorManager';
+import EntranceDoors from './entrance/EntranceDoors';
+import EmptyCorridor from './entrance/EmptyCorridor';
 import useInfiniteCamera from '../../hooks/useInfiniteCamera';
-import SignSystem from './SignSystem';
+import SignSystem from './entrance/SignSystem';
 
 // Positioning:
 // - Segment -1's SegmentDoors are at Z=15

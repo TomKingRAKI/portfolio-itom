@@ -14,7 +14,7 @@ const EmptyCorridor = ({ cameraZ = 10 }) => {
     const corridorHeight = 3.5; // Standard height for floor level calculation
 
     // Load floor texture
-    const floorTexture = useTexture('/textures/floor_paper.webp');
+    const floorTexture = useTexture('/textures/entrance/floor_paper.webp');
     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
     floorTexture.repeat.set(4, 20); // Adjust repeat to match aspect ratio (2816x1536)
 

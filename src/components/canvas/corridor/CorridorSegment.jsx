@@ -7,7 +7,7 @@ import Door from './Door';
 import SegmentDoors from './SegmentDoors';
 import Avatar from './Avatar';
 import HeroText from './HeroText';
-import Doodles from './Doodles';
+import Doodles from '../decorations/Doodles';
 
 /**
  * CorridorSegment Component
