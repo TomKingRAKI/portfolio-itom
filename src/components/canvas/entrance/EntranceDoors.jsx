@@ -4,7 +4,7 @@ import { Text, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
 
-// Use same font as App.jsx preload
+// Use same font as App.jsx preload (Inter) - works reliably
 const FONT_URL = 'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff';
 
 
@@ -46,11 +46,148 @@ const EntranceDoors = ({
     const windowSketchTexture = useTexture('/textures/entrance/window_sketch.png');
     const avatarWindowTexture = useTexture('/textures/entrance/avatar_window.png');
     const avatarTexture = useTexture('/images/avatar-happy.png');
+    const treeTexture = useTexture('/textures/entrance/tree_sketch.png');
+    const mouseTexture = useTexture('/textures/entrance/mouse_hanging.png');
+    const potTexture = useTexture('/textures/entrance/pot_with_duck.png');
+    const bugTexture = useTexture('/textures/entrance/bug_sketch.png');
+    const inkSplashTexture = useTexture('/images/ink-splash.png');
+    const speechBubbleTexture = useTexture('/textures/entrance/speech_bubble.png');
 
     // Cat Ref
     const leftPupilRef = useRef();
     const rightPupilRef = useRef();
     const catGroupRef = useRef(); // To get world position for tracking
+    const bugRef = useRef();
+
+    // Bug Click Animation State
+    const [isBugClicked, setIsBugClicked] = useState(false);
+    const [textVisible, setTextVisible] = useState(false);
+    const [clipProgress, setClipProgress] = useState(0); // 0-1 for pencil drawing reveal
+    const inkSplashRef = useRef();
+    const bugFixedTextRef = useRef();
+    const bugClickPos = useRef({ x: 0, y: 0 }); // Store click position
+
+    // Duck Speech Bubble State (Rubber Duck Debugging)
+    const [isDuckSpeaking, setIsDuckSpeaking] = useState(false);
+    const [duckQuote, setDuckQuote] = useState('');
+    const speechBubbleRef = useRef();
+
+    // Rubber Duck Debugging Quotes
+    const duckQuotes = [
+        "Have you tried console.log()?",
+        "Did you clear the cache?",
+        "It works on my machine! 🤷",
+        "Have you turned it off and on again?",
+        "Maybe it's a CSS issue?",
+        "Check for missing semicolons!",
+        "Did you read the error message?",
+        "Have you tried Stack Overflow?",
+        "Is it plugged in?",
+        "Works in production! 🚀",
+    ];
+
+    // Bug Click Handler
+    const handleBugClick = (e) => {
+        e.stopPropagation();
+        if (isBugClicked) return; // Already clicked
+
+        // Store bug position at click time
+        if (bugRef.current) {
+            bugClickPos.current = {
+                x: bugRef.current.position.x,
+                y: bugRef.current.position.y
+            };
+        }
+
+        setIsBugClicked(true);
+        document.body.style.cursor = 'auto';
+
+        // Animate ink splash scale up
+        if (inkSplashRef.current) {
+            // Position ink splash at bug's last position
+            inkSplashRef.current.position.x = bugClickPos.current.x;
+            inkSplashRef.current.position.y = bugClickPos.current.y;
+            inkSplashRef.current.scale.set(0, 0, 0);
+            inkSplashRef.current.material.opacity = 1;
+
+            gsap.to(inkSplashRef.current.scale, {
+                x: 0.8,
+                y: 0.8,
+                z: 1,
+                duration: 0.4,
+                ease: 'back.out(1.7)'
+            });
+        }
+
+        // Pencil drawing effect - smooth reveal from left to right
+        setTextVisible(true);
+        setClipProgress(0);
+
+        // Animate clip progress from 0 to 1 (reveals text like pencil drawing)
+        gsap.to({ progress: 0 }, {
+            progress: 1,
+            duration: 0.8,
+            ease: 'power1.inOut',
+            onUpdate: function () {
+                setClipProgress(this.targets()[0].progress);
+            },
+            onComplete: () => {
+                // Fade out after a delay
+                setTimeout(() => {
+                    if (inkSplashRef.current) {
+                        gsap.to(inkSplashRef.current.material, {
+                            opacity: 0,
+                            duration: 1,
+                            ease: 'power2.out'
+                        });
+                    }
+                }, 1500);
+            }
+        });
+    };
+
+    // Duck Click Handler (Rubber Duck Debugging)
+    const handleDuckClick = (e) => {
+        e.stopPropagation();
+        if (isDuckSpeaking) return; // Already speaking
+
+        // Pick random quote
+        const randomQuote = duckQuotes[Math.floor(Math.random() * duckQuotes.length)];
+        setDuckQuote(randomQuote);
+        setIsDuckSpeaking(true);
+
+        // Scale in animation for speech bubble
+        if (speechBubbleRef.current) {
+            speechBubbleRef.current.scale.set(0, 0, 0);
+            gsap.to(speechBubbleRef.current.scale, {
+                x: 1,
+                y: 1,
+                z: 1,
+                duration: 0.3,
+                ease: 'back.out(1.7)'
+            });
+        }
+
+        // Hide after 3 seconds
+        setTimeout(() => {
+            if (speechBubbleRef.current) {
+                gsap.to(speechBubbleRef.current.scale, {
+                    x: 0,
+                    y: 0,
+                    z: 0,
+                    duration: 0.2,
+                    ease: 'power2.in',
+                    onComplete: () => setIsDuckSpeaking(false)
+                });
+            } else {
+                setIsDuckSpeaking(false);
+            }
+        }, 3000);
+    };
+
+    // ... (lines omitted)
+
+
 
     // Door dimensions - calculated from texture proportions (332x848 = 1:2.55)
     // Door dimensions - calculated from texture proportions (332x848 = 1:2.55)
@@ -224,6 +361,36 @@ const EntranceDoors = ({
         rightPupilRef.current.position.y = THREE.MathUtils.lerp(rightPupilRef.current.position.y, 0.28 + targetY, 0.1);
     });
 
+    // --- Mouse Swinging Animation ---
+    const mousePivotRef = useRef();
+    useFrame(({ clock }) => {
+        if (mousePivotRef.current) {
+            // Gentle swing: sin wave
+            // Amplitude: 0.05 radians (approx 3 degrees)
+            // Speed: 1.5
+            mousePivotRef.current.rotation.x = Math.sin(clock.elapsedTime * 1.5) * 0.05;
+        }
+
+        // --- Bug Animation ---
+        if (bugRef.current) {
+            const time = clock.elapsedTime;
+            // Wandering logic: slightly complex sine waves for "random" walking felt
+            // Initial Pos: [2.5, floorY + 3.0, 0.16] (Above window)
+            // Range: +/- 0.3 in X, +/- 0.3 in Y
+
+            const xOffset = Math.sin(time * 0.8) * 0.3 + Math.sin(time * 1.5) * 0.1;
+            const yOffset = Math.cos(time * 0.6) * 0.2 + Math.cos(time * 1.1) * 0.1;
+
+            bugRef.current.position.x = 3 + xOffset;
+            bugRef.current.position.y = (floorY + 3.8) + yOffset;
+
+            // Random rotation jitter
+            bugRef.current.rotation.z = Math.sin(time * 5) * 0.1 + Math.atan2(yOffset, xOffset) * 0.2;
+        }
+    });
+
+
+
     // Helper for window hover
     const handleWindowEnter = (e) => {
         e.stopPropagation();
@@ -277,7 +444,8 @@ const EntranceDoors = ({
     return (
         <group ref={groupRef} position={[position[0], 0, position[2]]}>
 
-            {/* === STONE PATH FLOOR (On Top) === */}
+            {/* === STONE PATH FLOOR (On Top - in front of entrance) === */}
+            {/* WYSOKOŚĆ STONE PATH: zmień 'floorY + 0.02' - większa liczba = wyżej */}
             <mesh
                 position={[0, floorY + 0.02, pathLength / 2]}
                 rotation={[-Math.PI / 2, 0, 0]}
@@ -288,6 +456,7 @@ const EntranceDoors = ({
                     transparent={true}
                 />
             </mesh>
+
 
             {/* LEFT WALL PANEL */}
             <mesh position={[-(doorOpeningWidth / 2 + sideWallWidth / 2), wallCenterY, 0]}>
@@ -313,9 +482,9 @@ const EntranceDoors = ({
                 1. args={[Szerokość, Wysokość]} - Rozmiar obrazka
                 2. facadeYOffset - Przesunięcie góra/dół (np. -1 obniży, 1 podwyższy)
             */}
-            <mesh position={[0, wallCenterY + facadeYOffset, 0.15]}>
+            <mesh position={[0, wallCenterY + facadeYOffset + 1.65, 0.15]}>
                 {/* args={[Szerokość, Wysokość]} - Zmieniaj te liczby (np. 7, 8) */}
-                <planeGeometry args={[11., 4.7]} />
+                <planeGeometry args={[16., 8]} />
                 <meshStandardMaterial
                     map={bricksTexture}
                     transparent={true}
@@ -471,9 +640,154 @@ const EntranceDoors = ({
                 </mesh>
             </group>
 
+            {/* DUCK POT (Right Side - Under Window) */}
+            <group position={[2.5, floorY + 0.45, 0.4]}>
+                {/* Pot texture */}
+                <mesh>
+                    <planeGeometry args={[3, 1.8]} />
+                    <meshStandardMaterial
+                        map={potTexture}
+                        transparent={true}
+                        alphaTest={0.01}
+                        depthWrite={false}
+                    />
+                </mesh>
+
+                {/* Invisible hitbox just for the duck (right side of pot) */}
+                <mesh
+                    position={[0.38, 0.1, 0.01]}
+                    onClick={handleDuckClick}
+                    onPointerEnter={() => { document.body.style.cursor = 'pointer'; }}
+                    onPointerLeave={() => { document.body.style.cursor = 'auto'; }}
+                >
+                    <planeGeometry args={[0.6, 0.6]} />
+                    <meshBasicMaterial transparent opacity={0} />
+                </mesh>
+
+                {/* Speech Bubble */}
+                <group
+                    ref={speechBubbleRef}
+                    position={[0.9, 0.8, 0.1]}
+                    scale={[0, 0, 0]}
+                >
+                    <mesh>
+                        <planeGeometry args={[1.8, 1.2]} />
+                        <meshStandardMaterial
+                            map={speechBubbleTexture}
+                            transparent={true}
+                            alphaTest={0.01}
+                            depthWrite={false}
+                        />
+                    </mesh>
+
+                    {/* Quote Text */}
+                    {/* ROZMIAR TEKSTU: fontSize - mniejsza = mniejszy tekst */}
+                    {/* ZAWIJANIE: maxWidth - mniejsza = wcześniejsze zawijanie */}
+                    {isDuckSpeaking && (
+                        <Text
+                            position={[0, 0.1, 0.01]}
+                            fontSize={0.07}
+                            color="#1a1a1a"
+                            anchorX="center"
+                            anchorY="middle"
+                            font={FONT_URL}
+                            maxWidth={1.4}
+                            textAlign="center"
+                        >
+                            {duckQuote}
+                        </Text>
+                    )}
+                </group>
+            </group>
+
+            {/* ANIMATED BUG (Right Side - Above Window) */}
+            {!isBugClicked && (
+                <mesh
+                    ref={bugRef}
+                    position={[2.5, floorY + 2.8, 0.16]}
+                    onClick={handleBugClick}
+                    onPointerEnter={() => { document.body.style.cursor = 'pointer'; }}
+                    onPointerLeave={() => { document.body.style.cursor = 'auto'; }}
+                >
+                    <planeGeometry args={[0.4, 0.4]} />
+                    <meshStandardMaterial
+                        map={bugTexture}
+                        transparent={true}
+                        alphaTest={0.01}
+                        depthWrite={false}
+                    />
+                </mesh>
+            )}
+
+            {/* INK SPLASH - appears when bug is clicked */}
+            <mesh
+                ref={inkSplashRef}
+                position={[2.5, floorY + 2.8, 0.17]}
+                scale={[0, 0, 0]}
+                visible={isBugClicked}
+            >
+                <planeGeometry args={[2, 2]} />
+                <meshStandardMaterial
+                    map={inkSplashTexture}
+                    transparent={true}
+                    alphaTest={0.01}
+                    depthWrite={false}
+                />
+            </mesh>
+
+            {/* BUG FIXED! Text - pencil drawing effect */}
+            {isBugClicked && textVisible && (
+                <Text
+                    ref={bugFixedTextRef}
+                    position={[bugClickPos.current.x || 2.5, (bugClickPos.current.y || (floorY + 2.8)), 0.35]}
+                    fontSize={0.18}
+                    color="#1a1a1a"
+                    anchorX="center"
+                    anchorY="middle"
+                    font={FONT_URL}
+                    outlineWidth={0.015}
+                    outlineColor="#ffffff"
+                    clipRect={[-1, -0.5, -1 + (clipProgress * 2.5), 0.5]}
+                >
+                    BUG FIXED!
+                </Text>
+            )}
 
 
 
+
+
+            {/* TREE & MOUSE (Left Side) */}
+            <group position={[-2.3, floorY + 2.5, 2.2]}>
+                {/* Tree */}
+                <mesh position={[0, 0, 0]}>
+                    <planeGeometry args={[4, 5.5]} />
+                    <meshStandardMaterial
+                        map={treeTexture}
+                        transparent={true}
+                        alphaTest={0.01}
+                        depthWrite={false}
+                    />
+                </mesh>
+                {/* Mouse Hanging - Pivot Group for swinging */}
+                {/* Pivot is moved UP by ~2.0 to be near the top of the string/branch */}
+                {/* Original Mesh Y was 0.02. New Pivot Y is 0.02 + 2.0 = 2.02 */}
+                {/* Mouse Hanging - Pivot Group for swinging */}
+                {/* Pivot: 421, 597px. Offset relative to center: X=0.351, Y=-0.456 */}
+                {/* Group Position shift: (-0.01, 0.02) + (0.351, -0.456) = (0.341, -0.436) */}
+                <group ref={mousePivotRef} position={[0.341, 0.02 - 0.456, 0]}>
+                    {/* Mesh moves opposite to pivot offset to keep visual position */}
+                    <mesh position={[-0.351, 0.456, 0]}>
+                        <planeGeometry args={[4, 5.5]} />
+                        <meshStandardMaterial
+                            map={mouseTexture}
+                            transparent={true}
+                            alphaTest={0.01}
+                            depthWrite={false}
+                        />
+                    </mesh>
+                </group>
+            </group>
 
             {/* CAT SKETCH (Front Facing) */}
             <group position={[-1.5, floorY + 0.6, 0.8]} ref={catGroupRef}>
@@ -483,7 +797,7 @@ const EntranceDoors = ({
                     <meshStandardMaterial
                         map={catFrontBodyTexture}
                         transparent={true}
-                        blending={THREE.MultiplyBlending}
+                        alphaTest={0.01}
                         depthWrite={false}
                     />
                 </mesh>

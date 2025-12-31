@@ -56,8 +56,9 @@ const CorridorSegmentEmpty = ({ zStart, corridorWidth, corridorHeight, floorText
     return (
         <group>
             {/* Floor with Paper Texture */}
+            {/* Y position: -1.75 is floor level. Lower value = lower floor */}
             <mesh
-                position={[0, -corridorHeight / 2, zCenter]}
+                position={[0, -2, zCenter]}
                 rotation={[-Math.PI / 2, 0, 0]}
             >
                 <planeGeometry args={[corridorWidth, length]} />

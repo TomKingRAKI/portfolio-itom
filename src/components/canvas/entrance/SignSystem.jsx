@@ -13,24 +13,12 @@ const SignSystem = (props) => {
 
     useFrame((state) => {
         if (groupRef.current) {
-            // 1. Base Wind Sway (Idle animation)
+            // Simple wind sway (idle animation only)
             const time = state.clock.elapsedTime + timeOffset;
             const windSway = Math.sin(time * 2) * 0.05; // Gentle constant sway
 
-            // 2. Mouse Interaction (Look At effect)
-            // state.pointer.x is -1 to 1 (left to right)
-            // state.pointer.y is -1 to 1 (bottom to top)
-
-            // We want the sign to rotate towards the mouse.
-            // X-axis rotation (tilting up/down) based on mouse Y
-            // Y-axis rotation (turning left/right) based on mouse X
-
-            const targetRotationX = windSway + (state.pointer.y * -0.2); // Mouse up -> tilt up (negative X)
-            const targetRotationY = state.pointer.x * 0.2; // Mouse right -> turn right (positive Y)
-
-            // Smoothly interpolate current rotation to target rotation
-            groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetRotationX, 0.1);
-            groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, targetRotationY, 0.1);
+            groupRef.current.rotation.x = windSway;
+            groupRef.current.rotation.y = 0;
         }
     });
 
