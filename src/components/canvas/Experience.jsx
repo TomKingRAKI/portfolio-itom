@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 
 import InfiniteCorridorManager from './corridor/InfiniteCorridorManager';
@@ -25,7 +25,7 @@ const ENTRANCE_DOORS_Z = 22;
 const Experience = ({ isLoaded, onSceneReady }) => {
     const [hasEntered, setHasEntered] = useState(false);
     const [currentRoom, setCurrentRoom] = useState(null);
-    const [cameraZ, setCameraZ] = useState(28);
+
     const { camera } = useThree();
 
     // Signal ready on mount (after texture load + initial render)
@@ -33,19 +33,16 @@ const Experience = ({ isLoaded, onSceneReady }) => {
         onSceneReady?.();
     }, [onSceneReady]);
 
-    // Camera control - only works after entering
+    // Camera control - both scroll and parallax only work after entering
     useInfiniteCamera({
         segmentLength: 80,
         scrollSpeed: 0.025,
         parallaxIntensity: 0.4,
         smoothing: 0.06,
-        enabled: hasEntered
+        scrollEnabled: hasEntered,
+        parallaxEnabled: hasEntered
     });
 
-    // Track camera Z for EmptyCorridor
-    useFrame(() => {
-        setCameraZ(camera.position.z);
-    });
 
     // Handle entrance complete
     const handleEntranceComplete = useCallback(() => {
@@ -67,7 +64,7 @@ const Experience = ({ isLoaded, onSceneReady }) => {
 
             {/* === EMPTY CORRIDOR (provides context during entrance) === */}
             {!hasEntered && (
-                <EmptyCorridor cameraZ={cameraZ} />
+                <EmptyCorridor camera={camera} />
             )}
 
             {/* === ENTRANCE DOORS (visible until entered) === */}

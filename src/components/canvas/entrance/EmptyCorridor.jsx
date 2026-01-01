@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useTexture } from '@react-three/drei';
 
@@ -9,27 +10,34 @@ import { useTexture } from '@react-three/drei';
  * No doors, no decorations, no ITOM - just the corridor structure.
  * Used during preloader auto-scroll.
  */
-const EmptyCorridor = ({ cameraZ = 10 }) => {
+const EmptyCorridor = ({ camera }) => {
     const corridorWidth = 15; // Wide floor
     const corridorHeight = 3.5; // Standard height for floor level calculation
+    const [segmentBase, setSegmentBase] = useState(0);
 
     // Load floor texture
     const floorTexture = useTexture('/textures/entrance/floor_paper.webp');
     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
     floorTexture.repeat.set(4, 20); // Adjust repeat to match aspect ratio (2816x1536)
 
+    // Update segment base when camera moves to a new segment (not every frame)
+    useFrame(() => {
+        if (!camera) return;
+        const segmentLength = 40;
+        const newBase = Math.floor(camera.position.z / segmentLength) * segmentLength;
+        if (newBase !== segmentBase) {
+            setSegmentBase(newBase);
+        }
+    });
+
     // Generate corridor segments around camera
     const segments = useMemo(() => {
-        const segmentLength = 40;
         const result = [];
-
-        // Generate 5 segments around current camera position
-        const baseZ = Math.floor(cameraZ / segmentLength) * segmentLength;
         for (let i = -2; i <= 2; i++) {
-            result.push(baseZ + i * segmentLength);
+            result.push(segmentBase + i * 40);
         }
         return result;
-    }, [Math.floor(cameraZ / 40)]);
+    }, [segmentBase]);
 
     return (
         <group>

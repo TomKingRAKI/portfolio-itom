@@ -259,7 +259,7 @@ const EntranceDoors = ({
 
         // Camera flies through
         tl.to(camera.position, {
-            z: 8,
+            z: 11,
             y: 0.2, // Match hook's base Y position
             duration: 1.8,
             ease: 'power2.inOut'

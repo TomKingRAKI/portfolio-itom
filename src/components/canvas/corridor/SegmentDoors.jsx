@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
+import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
 
@@ -18,6 +19,10 @@ const SegmentDoors = ({
     const rightDoorRef = useRef();
     const [isOpen, setIsOpen] = useState(false);
     const { camera } = useThree();
+
+    // Load wall texture
+    const wallTexture = useTexture('/textures/corridor/wall_texture.webp');
+    wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
 
     // Door dimensions - no gap between doors
     const doorWidth = 1.05;
@@ -66,19 +71,28 @@ const SegmentDoors = ({
             {/* === LEFT WALL PANEL === */}
             <mesh position={[-(doorOpeningWidth / 2 + sideWallWidth / 2), wallCenterY, 0]}>
                 <boxGeometry args={[sideWallWidth, corridorHeight, wallThickness]} />
-                <meshStandardMaterial color="#f8f5f0" roughness={0.95} />
+                <meshStandardMaterial
+                    map={wallTexture}
+                    roughness={0.95}
+                />
             </mesh>
 
             {/* === RIGHT WALL PANEL === */}
             <mesh position={[(doorOpeningWidth / 2 + sideWallWidth / 2), wallCenterY, 0]}>
                 <boxGeometry args={[sideWallWidth, corridorHeight, wallThickness]} />
-                <meshStandardMaterial color="#f8f5f0" roughness={0.95} />
+                <meshStandardMaterial
+                    map={wallTexture}
+                    roughness={0.95}
+                />
             </mesh>
 
             {/* === TOP WALL PANEL (above doors) === */}
             <mesh position={[0, topWallCenterY, 0]}>
                 <boxGeometry args={[doorOpeningWidth, topWallHeight, wallThickness]} />
-                <meshStandardMaterial color="#f8f5f0" roughness={0.95} />
+                <meshStandardMaterial
+                    map={wallTexture}
+                    roughness={0.95}
+                />
             </mesh>
 
             {/* === DOOR FRAME === */}

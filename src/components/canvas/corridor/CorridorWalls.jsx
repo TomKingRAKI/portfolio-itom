@@ -1,5 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useTexture } from '@react-three/drei';
 
 // Import constants to match CorridorSegment logic
 // Note: In a real project these might be in a shared config file.
@@ -7,6 +9,63 @@ import * as THREE from 'three';
 const WALL_X_OUTER = 3.5;
 const WALL_X_INNER = 1.7;
 // Note: DOOR_Z_SPAN = 4 (from CorridorSegment)
+
+/**
+ * DoorWallSegment - Dynamic wall segment that tilts towards camera
+ * Used for the angled walls next to doors
+ */
+const DoorWallSegment = ({ position, baseRotationY, width, corridorHeight, wallTexture, side }) => {
+    const meshRef = useRef();
+    const { camera } = useThree();
+
+    // Tilt state
+    const currentTilt = useRef(0);
+
+    // Tilt parameters - adjust these to change the effect
+    const BASE_TILT = 0.02;   // ~1 degree base tilt
+    const MAX_TILT = 0.20;    // ~12 degrees max tilt when camera is close
+    const TILT_START = 12;    // Start tilting when camera is 12 units away
+    const TILT_PEAK = 2;      // Max tilt at 2 units
+
+    useFrame(() => {
+        if (!meshRef.current) return;
+
+        const distance = Math.abs(camera.position.z - position[2]);
+        let targetTilt = BASE_TILT;
+
+        if (distance < TILT_START && distance > TILT_PEAK) {
+            // Approaching: ramp up tilt
+            const t = (TILT_START - distance) / (TILT_START - TILT_PEAK);
+            const easedT = t * (2 - t); // easeOutQuad
+            targetTilt = BASE_TILT + (MAX_TILT - BASE_TILT) * easedT;
+        } else if (distance <= TILT_PEAK) {
+            // Very close: max tilt
+            targetTilt = MAX_TILT;
+        }
+
+        // Smooth interpolation
+        currentTilt.current = THREE.MathUtils.lerp(currentTilt.current, targetTilt, 0.06);
+
+        // Apply tilt - direction based on side
+        const tiltDirection = side === 'left' ? -1 : 1;
+        meshRef.current.rotation.y = baseRotationY + (currentTilt.current * tiltDirection);
+    });
+
+    // Clone texture for independent repeat
+    const segTexture = useMemo(() => {
+        const tex = wallTexture.clone();
+        tex.needsUpdate = true;
+        tex.repeat.set(width / 2, corridorHeight / 2);
+        return tex;
+    }, [wallTexture, width, corridorHeight]);
+
+    return (
+        <mesh ref={meshRef} position={position}>
+            <planeGeometry args={[width, corridorHeight]} />
+            <meshStandardMaterial map={segTexture} roughness={1} metalness={0} />
+        </mesh>
+    );
+};
 
 /**
  * CorridorWalls Component
@@ -18,6 +77,18 @@ const WALL_X_INNER = 1.7;
  */
 const CorridorWalls = ({ zStart = 10, length = 80, doorPositions = [], zClip = 100000 }) => {
     const corridorHeight = 3.5;
+
+    // Load floor texture
+    const floorTexture = useTexture('/textures/corridor/floor_wood.webp');
+    floorTexture.wrapS = floorTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+    // Load wall texture
+    const wallTexture = useTexture('/textures/corridor/wall_texture.webp');
+    wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
+
+    // Load ceiling texture
+    const ceilingTexture = useTexture('/textures/corridor/ceiling_texture.webp');
+    ceilingTexture.wrapS = ceilingTexture.wrapT = THREE.RepeatWrapping;
 
     // Calculate effective geometry based on clipping
     // We only render from Math.min(zStart, zClip) down to (zStart - length)
@@ -121,7 +192,8 @@ const CorridorWalls = ({ zStart = 10, length = 80, doorPositions = [], zClip = 1
                 type: 'door',
                 position: [midX, 0, midZ],
                 rotationY: finalRotation,
-                width: dist
+                width: dist,
+                side: side  // For dynamic tilt direction
             });
 
             // 4. Reset Connector (The hidden face)
@@ -169,43 +241,119 @@ const CorridorWalls = ({ zStart = 10, length = 80, doorPositions = [], zClip = 1
 
     return (
         <group>
-            {/* Floor (Widen to accommodate new wall width) */}
-            <mesh
-                position={[0, -corridorHeight / 2, zCenter]}
-                rotation={[-Math.PI / 2, 0, 0]}
-            >
-                {/* 3.5 * 2 = 7 width */}
-                <planeGeometry args={[7, effectiveLength]} />
-                <meshStandardMaterial color="#f5f2eb" roughness={1} metalness={0} />
-            </mesh>
+            {/* Floor with wood texture - alternating tiles for seamless pattern */}
+            {/* Every other tile is mirrored (scale X = -1) AND rotated 180° for seamless joining */}
+            {(() => {
+                const tileLength = 10; // Each tile is 10 units long
+                const tileWidth = 7;   // Floor width (matching corridor)
+                const tiles = [];
+                const floorY = -corridorHeight / 2;
 
-            {/* Ceiling */}
-            <mesh
-                position={[0, corridorHeight / 2, zCenter]}
-                rotation={[Math.PI / 2, 0, 0]}
-            >
-                <planeGeometry args={[7, effectiveLength]} />
-                <meshStandardMaterial color="#fefefe" roughness={1} />
-            </mesh>
+                // Use global Z alignment to prevent tiles from overlapping between segments
+                // Tiles are aligned to a global grid starting at Z=0
+                const segmentEndZ = effectiveStart - effectiveLength;
 
-            {/* Render Wall Segments */}
-            {[...leftSegments, ...rightSegments].map((seg, i) => (
-                <mesh
-                    key={i}
-                    position={seg.position}
-                    rotation={seg.rotation || [0, seg.rotationY, 0]}
-                >
-                    <planeGeometry args={[seg.width, corridorHeight]} />
-                    <meshStandardMaterial color="#faf8f5" roughness={1} />
-                </mesh>
-            ))}
+                // First tile position with fine-tuned offset
+                // Adjust FLOOR_START_OFFSET to control where the floor starts (in units, not tiles)
+                const FLOOR_START_OFFSET = 2; // Positive = start further back, Negative = start closer to camera
+                const firstTileIndex = Math.floor(effectiveStart / tileLength);
+                let tileZ = firstTileIndex * tileLength - tileLength / 2 + FLOOR_START_OFFSET;
 
-            {/* Floor grid */}
-            <gridHelper
-                args={[effectiveLength, effectiveLength * 2, '#d5d5d5', '#e8e8e8']}
-                position={[0, -corridorHeight / 2 + 0.01, zCenter]}
-                rotation={[0, Math.PI / 2, 0]}
-            />
+                while (tileZ + tileLength / 2 > segmentEndZ) {
+                    // Use global tile index for alternating pattern
+                    const globalTileIndex = Math.round(tileZ / tileLength);
+                    const isMirrored = Math.abs(globalTileIndex) % 2 === 1;
+
+                    tiles.push(
+                        <mesh
+                            key={`floor-tile-${tileZ.toFixed(1)}`}
+                            position={[0, floorY, tileZ]}
+                            rotation={[-Math.PI / 2, 0, isMirrored ? Math.PI : 0]}
+                            scale={[isMirrored ? -1 : 1, 1, 1]}
+                        >
+                            <planeGeometry args={[tileWidth, tileLength]} />
+                            <meshStandardMaterial
+                                map={floorTexture}
+                                side={THREE.DoubleSide}
+                                roughness={1}
+                                metalness={0}
+                            />
+                        </mesh>
+                    );
+                    tileZ -= tileLength;
+                }
+                return tiles;
+            })()}
+
+            {/* Ceiling with texture - alternating tiles for seamless pattern */}
+            {(() => {
+                const tileLength = 10; // Match floor tile length
+                const tileWidth = 7;   // Ceiling width (matching corridor)
+                const tiles = [];
+                const ceilingY = corridorHeight / 2;
+
+                // Use same global Z alignment as floor
+                const segmentEndZ = effectiveStart - effectiveLength;
+
+                // First tile position with fine-tuned offset (same as floor)
+                const CEILING_START_OFFSET = 2; // Match floor offset
+                const firstTileIndex = Math.floor(effectiveStart / tileLength);
+                let tileZ = firstTileIndex * tileLength - tileLength / 2 + CEILING_START_OFFSET;
+
+                while (tileZ + tileLength / 2 > segmentEndZ) {
+                    // Use global tile index for alternating pattern
+                    const globalTileIndex = Math.round(tileZ / tileLength);
+                    const isMirrored = Math.abs(globalTileIndex) % 2 === 1;
+
+                    tiles.push(
+                        <mesh
+                            key={`ceiling-tile-${tileZ.toFixed(1)}`}
+                            position={[0, ceilingY, tileZ]}
+                            rotation={[Math.PI / 2, 0, isMirrored ? Math.PI : 0]}
+                            scale={[isMirrored ? -1 : 1, 1, 1]}
+                        >
+                            <planeGeometry args={[tileWidth, tileLength]} />
+                            <meshStandardMaterial
+                                map={ceilingTexture}
+                                map-repeat={[tileWidth / 2, tileLength / 2]}
+                                side={THREE.DoubleSide}
+                                roughness={1}
+                                metalness={0}
+                            />
+                        </mesh>
+                    );
+                    tileZ -= tileLength;
+                }
+                return tiles;
+            })()}
+
+            {/* Render Wall Segments with texture */}
+            {/* Skip 'connector' and 'door' segments - door segments are now handled by DoorSection */}
+            {[...leftSegments, ...rightSegments]
+                .filter(seg => seg.type === 'filler')
+                .map((seg, i) => {
+                    // Static filler segment
+                    const segTexture = wallTexture.clone();
+                    segTexture.needsUpdate = true;
+                    segTexture.repeat.set(seg.width / 2, corridorHeight / 2);
+
+                    return (
+                        <mesh
+                            key={i}
+                            position={seg.position}
+                            rotation={seg.rotation || [0, seg.rotationY, 0]}
+                        >
+                            <planeGeometry args={[seg.width, corridorHeight]} />
+                            <meshStandardMaterial
+                                map={segTexture}
+                                roughness={1}
+                                metalness={0}
+                            />
+                        </mesh>
+                    );
+                })}
+
+
 
             {/* Baseboards (Approximated or skip for complex geo for now) */}
             {/* Simplified: Just skip baseboards on zigzag for MVP efficiency */}

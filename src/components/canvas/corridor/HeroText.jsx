@@ -1,24 +1,60 @@
 import { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
+import * as THREE from 'three';
 
 /**
  * HeroText Component - Hand-drawn Style
  * 
  * ITOM branding with Gloria Hallelujah font feel.
  * Positioned to fit within corridor walls.
+ * Dodges RIGHT when camera approaches.
  */
 const HeroText = ({ position = [0, 0.3, 0] }) => {
     const groupRef = useRef();
     const underlineRef = useRef();
+    const { camera } = useThree();
 
-    // Subtle breathing animation
+    // Dodge state
+    const dodgeX = useRef(0);
+    const targetDodgeX = useRef(0);
+
+    // Animation loop
     useFrame((state) => {
-        if (groupRef.current) {
-            groupRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 0.5) * 0.02;
+        if (!groupRef.current) return;
+
+        // === DODGE LOGIC ===
+        const worldPos = new THREE.Vector3();
+        groupRef.current.getWorldPosition(worldPos);
+
+        const distance = camera.position.z - worldPos.z;
+
+        // Dodge parameters
+        const DODGE_START = 5;   // Start dodging when camera is 5 units away
+        const DODGE_PEAK = 0;    // Maximum dodge at 0 units
+        const DODGE_END = -2;    // Stop dodging after camera passes
+        const DODGE_AMOUNT = 2; // Move RIGHT (positive X)
+
+        if (distance > DODGE_PEAK && distance < DODGE_START) {
+            const t = (DODGE_START - distance) / (DODGE_START - DODGE_PEAK);
+            targetDodgeX.current = DODGE_AMOUNT * easeOutQuad(t);
+        } else if (distance <= DODGE_PEAK && distance > DODGE_END) {
+            const t = (distance - DODGE_END) / (DODGE_PEAK - DODGE_END);
+            targetDodgeX.current = DODGE_AMOUNT * easeOutQuad(t);
+        } else {
+            targetDodgeX.current = 0;
         }
+
+        dodgeX.current = THREE.MathUtils.lerp(dodgeX.current, targetDodgeX.current, 0.08);
+
+        // Apply position with dodge
+        groupRef.current.position.x = position[0] + dodgeX.current;
+
+        // Breathing animation
+        groupRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 0.5) * 0.02;
+
+        // Pulsing underline
         if (underlineRef.current) {
-            // Pulsing underline
             const pulse = 0.7 + Math.sin(state.clock.elapsedTime * 2.5) * 0.3;
             underlineRef.current.material.opacity = pulse;
         }
@@ -84,6 +120,9 @@ const HeroText = ({ position = [0, 0.3, 0] }) => {
         </group>
     );
 };
+
+// Easing function
+const easeOutQuad = (t) => t * (2 - t);
 
 /**
  * Wavy underline - hand-drawn style

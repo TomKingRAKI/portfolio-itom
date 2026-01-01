@@ -3,7 +3,7 @@ import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 
 import CorridorWalls from './CorridorWalls';
-import Door from './Door';
+import DoorSection from './DoorSection';
 import SegmentDoors from './SegmentDoors';
 import Avatar from './Avatar';
 import HeroText from './HeroText';
@@ -137,17 +137,17 @@ const CorridorSegment = ({
                 </Text>
             </group>
 
-            {/* === DOORS === */}
-            {doors.map((door) => (
-                <Door
+            {/* === DOOR SECTIONS (wall + door + label as one unit) === */}
+            {/* Hidden during entrance animation for segment -1 */}
+            {!hideSegmentDoors && doors.map((door) => (
+                <DoorSection
                     key={door.id}
                     position={[
                         door.x,
-                        -0.5,
-                        zOffset + door.relativeZ
+                        0,
+                        zOffset + door.relativeZ + 2
                     ]}
                     side={door.side}
-                    rotationY={door.rotation} // Pass explicit rotation
                     label={door.label}
                     icon={door.icon}
                     color={door.color}
