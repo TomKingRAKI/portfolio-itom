@@ -100,7 +100,7 @@ const EntranceDoors = ({
         }
 
         setIsBugClicked(true);
-        document.body.style.cursor = 'auto';
+        document.body.style.cursor = "url('/cursors/cursor-default.png'), auto";
 
         // Animate ink splash scale up
         if (inkSplashRef.current) {
@@ -219,6 +219,9 @@ const EntranceDoors = ({
         e.stopPropagation();
         if (isOpen || isAnimating) return;
 
+        // Reset cursor immediately on transition start
+        document.body.style.cursor = "url('/cursors/cursor-default.png'), auto";
+
         setIsOpen(true);
         setIsAnimating(true);
 
@@ -257,9 +260,9 @@ const EntranceDoors = ({
             ease: 'power2.out'
         }, 0.1);
 
-        // Camera flies through
+        // Camera flies through - STOP CLOSER to avatar/ITOM
         tl.to(camera.position, {
-            z: 11,
+            z: 11,  // Closer stop point (was 11)
             y: 0.2, // Match hook's base Y position
             duration: 1.8,
             ease: 'power2.inOut'
@@ -270,7 +273,7 @@ const EntranceDoors = ({
     const handlePointerEnter = () => {
         if (isOpen || isAnimating) return;
         setIsHovered(true);
-        document.body.style.cursor = 'pointer';
+        document.body.style.cursor = "url('/cursors/cursor-pointer.png'), pointer";
 
         // Slightly open doors on hover
         gsap.to(leftDoorRef.current.rotation, {
@@ -304,7 +307,7 @@ const EntranceDoors = ({
     const handlePointerLeave = () => {
         if (isOpen || isAnimating) return;
         setIsHovered(false);
-        document.body.style.cursor = 'auto';
+        document.body.style.cursor = "url('/cursors/cursor-default.png'), auto";
 
         // Close doors back
         gsap.to(leftDoorRef.current.rotation, {
@@ -395,7 +398,7 @@ const EntranceDoors = ({
     const handleWindowEnter = (e) => {
         e.stopPropagation();
         setIsWindowHovered(true);
-        document.body.style.cursor = 'pointer';
+        document.body.style.cursor = "url('/cursors/cursor-pointer.png'), pointer";
 
         if (windowAvatarRef.current) {
             gsap.to(windowAvatarRef.current.position, {
@@ -414,7 +417,7 @@ const EntranceDoors = ({
     const handleWindowLeave = (e) => {
         e.stopPropagation();
         setIsWindowHovered(false);
-        document.body.style.cursor = 'auto';
+        document.body.style.cursor = "url('/cursors/cursor-default.png'), auto";
 
         if (windowAvatarRef.current) {
             gsap.to(windowAvatarRef.current.position, {
@@ -657,8 +660,8 @@ const EntranceDoors = ({
                 <mesh
                     position={[0.38, 0.1, 0.01]}
                     onClick={handleDuckClick}
-                    onPointerEnter={() => { document.body.style.cursor = 'pointer'; }}
-                    onPointerLeave={() => { document.body.style.cursor = 'auto'; }}
+                    onPointerEnter={() => { document.body.style.cursor = "url('/cursors/cursor-pointer.png'), pointer"; }}
+                    onPointerLeave={() => { document.body.style.cursor = "url('/cursors/cursor-default.png'), auto"; }}
                 >
                     <planeGeometry args={[0.6, 0.6]} />
                     <meshBasicMaterial transparent opacity={0} />
@@ -706,8 +709,8 @@ const EntranceDoors = ({
                     ref={bugRef}
                     position={[2.5, floorY + 2.8, 0.16]}
                     onClick={handleBugClick}
-                    onPointerEnter={() => { document.body.style.cursor = 'pointer'; }}
-                    onPointerLeave={() => { document.body.style.cursor = 'auto'; }}
+                    onPointerEnter={() => { document.body.style.cursor = "url('/cursors/cursor-pointer.png'), pointer"; }}
+                    onPointerLeave={() => { document.body.style.cursor = "url('/cursors/cursor-default.png'), auto"; }}
                 >
                     <planeGeometry args={[0.4, 0.4]} />
                     <meshStandardMaterial

@@ -38,7 +38,7 @@
         /* Specific width is required for Firefox. */
         background: transparent;
         /* Otherwise white in Chrome */
-        cursor: pointer;
+        cursor: url('/cursors/cursor-pointer.png'), pointer;
 
         &:focus {
             outline: none;
@@ -48,7 +48,7 @@
         &::-webkit-slider-runnable-track {
             width: 100%;
             height: 3px;
-            cursor: pointer;
+            cursor: url('/cursors/cursor-pointer.png'), pointer;
             background: #1a1a1a;
             border-radius: 2px;
             // Make it look slightly imperfect/drawn
@@ -59,7 +59,7 @@
         &::-moz-range-track {
             width: 100%;
             height: 3px;
-            cursor: pointer;
+            cursor: url('/cursors/cursor-pointer.png'), pointer;
             background: #1a1a1a;
             border-radius: 2px;
         }
@@ -71,7 +71,7 @@
             width: 14px;
             border-radius: 50%;
             background: #1a1a1a;
-            cursor: pointer;
+            cursor: url('/cursors/cursor-pointer.png'), pointer;
             margin-top: -6px;
             /* You need to specify a margin in Chrome, but in Firefox and IE it is automatic */
             box-shadow: 0 0 0 2px #fafafa; // White outline to separate from track
@@ -88,7 +88,7 @@
             border: none;
             border-radius: 50%;
             background: #1a1a1a;
-            cursor: pointer;
+            cursor: url('/cursors/cursor-pointer.png'), pointer;
             box-shadow: 0 0 0 2px #fafafa;
             transition: transform 0.1s;
 
@@ -102,7 +102,7 @@
     .mute-btn {
         background: none;
         border: none;
-        cursor: pointer;
+        cursor: url('/cursors/cursor-pointer.png'), pointer;
         padding: 5px;
         display: flex;
         align-items: center;

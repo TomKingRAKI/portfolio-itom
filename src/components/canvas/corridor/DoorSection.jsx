@@ -231,6 +231,9 @@ const DoorSection = ({
             return;
         }
 
+        // Reset cursor on transition
+        document.body.style.cursor = "url('/cursors/cursor-default.png'), auto";
+
         setIsAnimating(true);
 
         // Take control of camera from hook
@@ -484,7 +487,7 @@ const DoorSection = ({
     const handlePointerEnter = () => {
         if (isOpen || isAnimating) return;
         setIsHovered(true);
-        document.body.style.cursor = 'pointer';
+        document.body.style.cursor = "url('/cursors/cursor-pointer.png'), pointer";
 
         // Slightly open door on hover
         if (doorRef.current) {
@@ -508,7 +511,7 @@ const DoorSection = ({
     const handlePointerLeave = () => {
         if (isOpen || isAnimating) return;
         setIsHovered(false);
-        document.body.style.cursor = 'auto';
+        document.body.style.cursor = "url('/cursors/cursor-default.png'), auto";
 
         // Close door
         if (doorRef.current) {

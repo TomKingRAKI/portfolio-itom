@@ -7,7 +7,7 @@ import DoorSection from './DoorSection';
 import SegmentDoors from './SegmentDoors';
 import Avatar from './Avatar';
 import HeroText from './HeroText';
-import Doodles from '../decorations/Doodles';
+import Doodles from './Doodles';
 
 /**
  * CorridorSegment Component
@@ -116,20 +116,21 @@ const CorridorSegment = ({
                 zClip={zClip}
             />
 
-            {/* === WELCOME AREA (Start of segment) === */}
-            <group position={[0, 0, zOffset - 5]}>
-                {/* ITOM Text */}
-                <HeroText position={[0, 0.3, -0.5]} />
+            {/* === WELCOME AREA (Start of segment) - MOVED CLOSER === */}
+            <group position={[0, 0, zOffset - 2]}>
+                {/* ITOM Text - centered (ITOM letters adjusted internally) */}
+                <HeroText position={[0, -0.1, -0.5]} />
 
-                {/* Avatar */}
-                <Avatar position={[0, -0.4, 0.5]} />
+                {/* Avatar - center */}
+                <Avatar position={[0, -0.61, -0.3]} />
+
 
                 {/* Doodles around avatar */}
                 <Doodles />
 
                 {/* Segment number (debug - can remove later) */}
                 <Text
-                    position={[1.7, 1.4, 0]}
+                    position={[1.7, 1.4, 0.3]}
                     fontSize={0.12}
                     color="#ccc"
                     anchorX="center"

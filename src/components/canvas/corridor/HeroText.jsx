@@ -1,122 +1,176 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 
+// Local fonts for sketch-style typography (TTF format required by troika)
+const RUBIK_SCRIBBLE_URL = '/fonts/RubikScribble-Regular.ttf';
+const CABIN_SKETCH_URL = '/fonts/CabinSketch-Regular.ttf';
+
+// Global flag - draw animation only happens ONCE per page load
+let hasPlayedDrawAnimation = false;
+
 /**
- * HeroText Component - Hand-drawn Style
+ * HeroText Component - Hand-drawn Style with Sketch Fonts
  * 
- * ITOM branding with Gloria Hallelujah font feel.
- * Positioned to fit within corridor walls.
- * Dodges RIGHT when camera approaches.
+ * WOW Effects for Awwwards SOTD:
+ * - ITOM in Rubik Scribble font (splits into letters during scroll)
+ * - Creative developer in Cabin Sketch font (also splits)
+ * - Floating micro-animations
+ * - Parallax split effect
+ * - RESPONSIVE: scales down on mobile
  */
 const HeroText = ({ position = [0, 0.3, 0] }) => {
     const groupRef = useRef();
-    const underlineRef = useRef();
+    const letterRefs = useRef([]);
+    const taglineRefs = useRef([]);
     const { camera } = useThree();
 
-    // Dodge state
-    const dodgeX = useRef(0);
-    const targetDodgeX = useRef(0);
+    // Responsive scale based on screen width - FLUID (no breakpoints)
+    const [scale, setScale] = useState(1);
+
+    useEffect(() => {
+        const updateScale = () => {
+            const width = window.innerWidth;
+            const minWidth = 320;
+            const maxWidth = 1200;
+            const minScale = 0.65;
+            const maxScale = 1.0;
+
+            const clampedWidth = Math.max(minWidth, Math.min(maxWidth, width));
+            const t = (clampedWidth - minWidth) / (maxWidth - minWidth);
+            setScale(minScale + t * (maxScale - minScale));
+        };
+
+        updateScale();
+        window.addEventListener('resize', updateScale);
+        return () => window.removeEventListener('resize', updateScale);
+    }, []);
+
+    // Split and dodge state
+    const splitAmount = useRef(0);
+    const targetSplit = useRef(0);
+    const floatY = useRef(0);
+
+    // Letter positions for ITOM split effect
+    const letters = useMemo(() => [
+        { char: 'I', baseX: -0.95, splitDir: -1.6, delay: 0 },
+        { char: 'T', baseX: -0.43, splitDir: -0.6, delay: 0 },
+        { char: 'O', baseX: 0.23, splitDir: 0.6, delay: 0 },
+        { char: 'M', baseX: 0.95, splitDir: 1.8, delay: 0 },
+    ], []);
+
+    // Tagline words for split effect
+    const taglineWords = useMemo(() => [
+        { text: '<', baseX: -0.85, splitDir: -1.5, delay: 0 },
+        { text: 'creative', baseX: -0.4, splitDir: -0.8, delay: 0 },
+        { text: 'developer', baseX: 0.4, splitDir: 0.8, delay: 0 },
+        { text: '/>', baseX: 0.85, splitDir: 1.5, delay: 0 },
+    ], []);
 
     // Animation loop
-    useFrame((state) => {
+    useFrame((state, delta) => {
         if (!groupRef.current) return;
 
-        // === DODGE LOGIC ===
+        const time = state.clock.elapsedTime;
+
+        // === SPLIT LOGIC based on camera distance ===
         const worldPos = new THREE.Vector3();
         groupRef.current.getWorldPosition(worldPos);
-
         const distance = camera.position.z - worldPos.z;
 
-        // Dodge parameters
-        const DODGE_START = 5;   // Start dodging when camera is 5 units away
-        const DODGE_PEAK = 0;    // Maximum dodge at 0 units
-        const DODGE_END = -2;    // Stop dodging after camera passes
-        const DODGE_AMOUNT = 2; // Move RIGHT (positive X)
+        const SPLIT_START = 3;
+        const SPLIT_PEAK = 0;
+        const SPLIT_END = -2;
+        const SPLIT_AMOUNT = 0.9;
 
-        if (distance > DODGE_PEAK && distance < DODGE_START) {
-            const t = (DODGE_START - distance) / (DODGE_START - DODGE_PEAK);
-            targetDodgeX.current = DODGE_AMOUNT * easeOutQuad(t);
-        } else if (distance <= DODGE_PEAK && distance > DODGE_END) {
-            const t = (distance - DODGE_END) / (DODGE_PEAK - DODGE_END);
-            targetDodgeX.current = DODGE_AMOUNT * easeOutQuad(t);
+        if (distance > SPLIT_PEAK && distance < SPLIT_START) {
+            const t = (SPLIT_START - distance) / (SPLIT_START - SPLIT_PEAK);
+            targetSplit.current = SPLIT_AMOUNT * easeOutQuad(t);
+        } else if (distance <= SPLIT_PEAK && distance > SPLIT_END) {
+            const t = (distance - SPLIT_END) / (SPLIT_PEAK - SPLIT_END);
+            targetSplit.current = SPLIT_AMOUNT * easeOutQuad(t);
         } else {
-            targetDodgeX.current = 0;
+            targetSplit.current = 0;
         }
 
-        dodgeX.current = THREE.MathUtils.lerp(dodgeX.current, targetDodgeX.current, 0.08);
+        splitAmount.current = THREE.MathUtils.lerp(splitAmount.current, targetSplit.current, 0.08);
 
-        // Apply position with dodge
-        groupRef.current.position.x = position[0] + dodgeX.current;
+        // Apply split to each letter of ITOM
+        letterRefs.current.forEach((ref, i) => {
+            if (ref) {
+                // Ensure opacity is 1
+                if (ref.material) ref.material.opacity = 1;
+                ref.scale.setScalar(1); // Ensure scale is 1, no lingering pop effect
 
-        // Breathing animation
-        groupRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 0.5) * 0.02;
+                const letter = letters[i];
+                ref.position.x = letter.baseX + letter.splitDir * splitAmount.current;
+                ref.position.y = 0.2 + Math.sin(time * 0.7 + i * 0.5) * 0.015;
+                ref.rotation.z = Math.sin(time * 0.5 + i) * 0.02 * (1 + splitAmount.current);
+            }
+        });
 
-        // Pulsing underline
-        if (underlineRef.current) {
-            const pulse = 0.7 + Math.sin(state.clock.elapsedTime * 2.5) * 0.3;
-            underlineRef.current.material.opacity = pulse;
-        }
+        // Apply split to tagline words
+        taglineRefs.current.forEach((ref, i) => {
+            if (ref) {
+                // Ensure opacity is 1
+                if (ref.material) ref.material.opacity = 1;
+
+                const word = taglineWords[i];
+                ref.position.x = word.baseX + word.splitDir * splitAmount.current * 0.6;
+                ref.position.y = -0.45 + Math.sin(time * 0.6 + i * 0.3) * 0.008;
+            }
+        });
+
+        // === FLOATING ANIMATION ===
+        floatY.current = Math.sin(time * 0.5) * 0.02;
+        // Don't override Y position entirely, add to base
+        groupRef.current.position.y = position[1] + floatY.current;
     });
 
     return (
-        <group ref={groupRef} position={position}>
-            {/* Main Title - ITOM (smaller to fit corridor) */}
-            <Text
-                position={[0, 0.2, 0]}
-                fontSize={0.8}
-                color="#1a1a1a"
-                anchorX="center"
-                anchorY="middle"
-                letterSpacing={0.05}
-            >
-                ITOM
-            </Text>
+        <group ref={groupRef} position={position} scale={[scale, scale, 1]}>
+            {/* ITOM Letters - Rubik Scribble font with fade-in animation */}
+            {letters.map((letter, i) => (
+                <Text
+                    key={letter.char}
+                    ref={(el) => (letterRefs.current[i] = el)}
+                    position={[letter.baseX, 0.2, 0]}
+                    fontSize={0.9}
+                    font={RUBIK_SCRIBBLE_URL}
+                    color="#ffffff"
+                    outlineWidth={0.012}
+                    outlineColor="#1a1a1a"
+                    anchorX="center"
+                    anchorY="middle"
+                    letterSpacing={0}
+                >
+                    {letter.char}
+                </Text>
+            ))}
 
-            {/* Hand-drawn style underline (wavy) */}
-            <WavyUnderline
-                ref={underlineRef}
-                position={[0, -0.1, 0.01]}
-                width={1.4}
-            />
+            {/* Tagline words - Cabin Sketch font with fade-in animation */}
+            {taglineWords.map((word, i) => (
+                <Text
+                    key={word.text}
+                    ref={(el) => (taglineRefs.current[i] = el)}
+                    position={[word.baseX, -0.55, 0.3]}
+                    fontSize={word.text === '<' || word.text === '/>' ? 0.18 : 0.16}
+                    font={word.text === '<' || word.text === '/>' ? undefined : CABIN_SKETCH_URL}
+                    color={word.text === '<' || word.text === '/>' ? '#39FF14' : '#555555'}
+                    anchorX="center"
+                    anchorY="middle"
+                    letterSpacing={0.04}
+                >
+                    {word.text}
+                </Text>
+            ))}
 
-            {/* Tagline */}
-            <Text
-                position={[0, -0.3, 0]}
-                fontSize={0.12}
-                color="#666666"
-                anchorX="center"
-                anchorY="middle"
-                letterSpacing={0.15}
-            >
-                creative developer
-            </Text>
-
-            {/* Decorative brackets */}
-            <Text
-                position={[-0.75, -0.3, 0]}
-                fontSize={0.14}
-                color="#39FF14"
-                anchorX="center"
-                anchorY="middle"
-            >
-                {"<"}
-            </Text>
-            <Text
-                position={[0.75, -0.3, 0]}
-                fontSize={0.14}
-                color="#39FF14"
-                anchorX="center"
-                anchorY="middle"
-            >
-                {"/>"}
-            </Text>
-
-            {/* Small doodle stars around title */}
-            <SmallStar position={[-0.7, 0.5, 0]} />
-            <SmallStar position={[0.8, 0.4, 0]} scale={0.7} />
-            <SmallStar position={[-0.5, -0.5, 0]} scale={0.5} />
+            {/* Small decorative doodles around title */}
+            <SmallStar position={[-1.2, 0.55, 0]} scale={0.07} />
+            <SmallStar position={[1.25, 0.45, 0]} scale={0.05} />
+            <SmallStar position={[-1.0, -0.6, 0]} scale={0.04} />
+            <SmallStar position={[1.1, -0.55, 0]} scale={0.035} />
         </group>
     );
 };
@@ -125,68 +179,27 @@ const HeroText = ({ position = [0, 0.3, 0] }) => {
 const easeOutQuad = (t) => t * (2 - t);
 
 /**
- * Wavy underline - hand-drawn style
+ * Small decorative star with rotation animation
  */
-const WavyUnderline = ({ position, width = 1.5 }) => {
-    const points = useMemo(() => {
-        const pts = [];
-        const segments = 20;
-        for (let i = 0; i <= segments; i++) {
-            const x = (i / segments - 0.5) * width;
-            const y = Math.sin(i * 0.8) * 0.015;
-            pts.push(x, y, 0);
-        }
-        return new Float32Array(pts);
-    }, [width]);
-
-    return (
-        <group position={position}>
-            {/* Main line */}
-            <mesh>
-                <planeGeometry args={[width, 0.02]} />
-                <meshBasicMaterial color="#39FF14" transparent opacity={0.9} />
-            </mesh>
-
-            {/* Second offset line for sketch effect */}
-            <mesh position={[0.02, -0.015, -0.001]}>
-                <planeGeometry args={[width * 0.95, 0.012]} />
-                <meshBasicMaterial color="#39FF14" transparent opacity={0.4} />
-            </mesh>
-        </group>
-    );
-};
-
-/**
- * Small decorative star
- */
-const SmallStar = ({ position, scale = 1 }) => {
+const SmallStar = ({ position, scale = 0.1 }) => {
     const ref = useRef();
 
     useFrame((state) => {
         if (ref.current) {
-            ref.current.rotation.z = state.clock.elapsedTime * 0.3;
-            ref.current.scale.setScalar(scale * (1 + Math.sin(state.clock.elapsedTime * 2) * 0.1));
+            ref.current.rotation.z = state.clock.elapsedTime * 0.25;
+            const pulse = scale * (1 + Math.sin(state.clock.elapsedTime * 1.8) * 0.12);
+            ref.current.scale.setScalar(pulse);
         }
     });
 
     return (
         <group ref={ref} position={position} scale={scale}>
-            <mesh rotation={[0, 0, 0]}>
-                <planeGeometry args={[0.08, 0.02]} />
-                <meshBasicMaterial color="#333" />
-            </mesh>
-            <mesh rotation={[0, 0, Math.PI / 2]}>
-                <planeGeometry args={[0.08, 0.02]} />
-                <meshBasicMaterial color="#333" />
-            </mesh>
-            <mesh rotation={[0, 0, Math.PI / 4]}>
-                <planeGeometry args={[0.06, 0.015]} />
-                <meshBasicMaterial color="#333" />
-            </mesh>
-            <mesh rotation={[0, 0, -Math.PI / 4]}>
-                <planeGeometry args={[0.06, 0.015]} />
-                <meshBasicMaterial color="#333" />
-            </mesh>
+            {[0, 1, 2, 3].map((i) => (
+                <mesh key={i} rotation={[0, 0, (i * Math.PI) / 4]}>
+                    <planeGeometry args={[1, 0.12]} />
+                    <meshBasicMaterial color="#333" transparent opacity={0.6} side={2} />
+                </mesh>
+            ))}
         </group>
     );
 };

@@ -10,6 +10,7 @@
     z-index: $z-preloader;
     // No background on container itself, the halves handle it
     pointer-events: auto;
+    cursor: url('/cursors/cursor-default.png'), auto;
 
     &__half {
         position: absolute;
