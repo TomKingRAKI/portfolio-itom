@@ -1,0 +1,128 @@
+.audio-controls {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 10px 15px;
+    // Optional: a faint paper background patch if needed, 
+    // but transparency is cleaner for now.
+
+    // The Slider Container
+    .volume-slider-container {
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); // Bouncy reveal
+
+        // Hide by default
+        opacity: 0;
+        width: 0;
+        transform: translateX(10px);
+    }
+
+    // Hover state on the PARENT wrapper triggers the reveal
+    &:hover .volume-slider-container {
+        opacity: 1;
+        width: 100px;
+        transform: translateX(0);
+    }
+
+    // Custom Range Input Styling
+    input[type=range] {
+        -webkit-appearance: none;
+        /* Hides the slider so that custom slider can be made */
+        width: 100%;
+        /* Specific width is required for Firefox. */
+        background: transparent;
+        /* Otherwise white in Chrome */
+        cursor: pointer;
+
+        &:focus {
+            outline: none;
+        }
+
+        // --- TRACK (The Line) ---
+        &::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 3px;
+            cursor: pointer;
+            background: #1a1a1a;
+            border-radius: 2px;
+            // Make it look slightly imperfect/drawn
+            border-top: 1px solid #1a1a1a;
+            box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.1);
+        }
+
+        &::-moz-range-track {
+            width: 100%;
+            height: 3px;
+            cursor: pointer;
+            background: #1a1a1a;
+            border-radius: 2px;
+        }
+
+        // --- THUMB (The Handle) ---
+        &::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            cursor: pointer;
+            margin-top: -6px;
+            /* You need to specify a margin in Chrome, but in Firefox and IE it is automatic */
+            box-shadow: 0 0 0 2px #fafafa; // White outline to separate from track
+            transition: transform 0.1s;
+
+            &:hover {
+                transform: scale(1.2);
+            }
+        }
+
+        &::-moz-range-thumb {
+            height: 14px;
+            width: 14px;
+            border: none;
+            border-radius: 50%;
+            background: #1a1a1a;
+            cursor: pointer;
+            box-shadow: 0 0 0 2px #fafafa;
+            transition: transform 0.1s;
+
+            &:hover {
+                transform: scale(1.2);
+            }
+        }
+    }
+
+    // The Button
+    .mute-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.8;
+        transition: transform 0.2s ease, opacity 0.2s;
+
+        &:hover {
+            opacity: 1;
+            transform: scale(1.1) rotate(5deg); // Little wiggle
+        }
+
+        svg {
+            width: 28px;
+            height: 28px;
+            fill: none;
+            stroke: #1a1a1a;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+    }
+}

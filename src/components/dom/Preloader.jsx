@@ -1,186 +1,252 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useProgress } from '@react-three/drei';
 import gsap from 'gsap';
+import { useAudio } from '../../context/AudioManager';
 
 const Preloader = ({ onComplete, ready }) => {
   const [isDone, setIsDone] = useState(false);
   const { progress: realProgress, active } = useProgress();
+  const { play } = useAudio();
 
+  // Track audio handle to stop loop
+  const pencilSoundRef = useRef(null);
+
+  // Use refs for animation targets
   const containerRef = useRef(null);
-  const accentRef = useRef(null);
-  const logoRef = useRef(null);
+  const leftHalfRef = useRef(null);
+  const rightHalfRef = useRef(null);
+  // Removed single svgPathRef as we now have two lines inside the halves
 
-  // Track visual progress in a ref to decouple from re-renders
-  // But we will apply it effectively via CSS variable or direct style
-  const [visualProgress, setVisualProgress] = useState(0);
+  // Track visual progress
+  const [targetProgress, setTargetProgress] = useState(0);
+  const [displayProgress, setDisplayProgress] = useState(0);
 
-  const CIRCUMFERENCE = 2 * Math.PI * 40; // r=40
+  // ----------------------------------------
+  // GENERATE TEAR PATH
+  // ----------------------------------------
+  const tearPoints = useMemo(() => {
+    const points = [];
+    const segments = 12; // Fewer segments
 
-  // ---------------------------------------------------------------------------
-  // 1. ROBUST CSS-DRIVEN PROGRESS
-  // ---------------------------------------------------------------------------
+    points.push([50, 0]);
+
+    for (let i = 1; i < segments; i++) {
+      const y = (i / segments) * 100;
+      const xOffset = (Math.random() - 0.5) * 6;
+      const x = 50 + xOffset;
+      points.push([x, y]);
+    }
+
+    points.push([50, 100]);
+    return points;
+  }, []);
+
+  const svgPathData = useMemo(() => {
+    return tearPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0]} ${p[1]} `).join(' ');
+  }, [tearPoints]);
+
+  const leftClipPoly = useMemo(() => {
+    let poly = '0% 0%, ';
+    tearPoints.forEach(p => { poly += `${p[0]}% ${p[1]}%, `; });
+    poly += '0% 100%';
+    return `polygon(${poly})`;
+  }, [tearPoints]);
+
+  const rightClipPoly = useMemo(() => {
+    let poly = '100% 0%, ';
+    poly += '100% 100%, ';
+    [...tearPoints].reverse().forEach(p => { poly += `${p[0]}% ${p[1]}%, `; });
+    return `polygon(${poly.slice(0, -2)})`;
+  }, [tearPoints]);
+
+
+  // ----------------------------------------
+  // SMOOTH LOADING LOGIC
+  // ----------------------------------------
   useEffect(() => {
-    // user wants the circle to reflect the ENTIRE wait.
-    // Download (active=true) is only part of it. Scene mounting/compiling (active=false, ready=false) is the rest.
-    // So we map download progress (0-100) to visual progress (0-85).
-    // The last 15% is reserved for the "ready" state (mounting/compiling).
-
-    let target = 0;
-
+    let newTarget = 0;
     if (active) {
-      // While downloading: 0 -> 85
-      target = (realProgress / 100) * 85;
+      newTarget = (realProgress / 100) * 85;
     } else {
-      // Downloads done.
       if (ready) {
-        // Scene reported ready -> 100%
-        target = 100;
+        newTarget = 100;
       } else {
-        // Downloads done, but waiting for mount/shaders -> stuck at 85-90%
-        // We can slowly creep it up a tiny bit to show "alive", but keep it under 100
-        target = 90;
+        newTarget = 90;
       }
     }
 
-    setVisualProgress(target);
+    setTargetProgress(prev => Math.max(prev, newTarget));
   }, [realProgress, active, ready]);
+
+  // Handle Pencil Sound
+  useEffect(() => {
+    // Start playing pencil if we are loading and not finished
+    // AND not already playing
+    if (displayProgress < 99 && !pencilSoundRef.current) {
+      pencilSoundRef.current = play('pencil', { loop: true, volume: 0.5 });
+    }
+    // Stop playing if we are done
+    else if (displayProgress >= 99 && pencilSoundRef.current) {
+      pencilSoundRef.current.stop();
+      pencilSoundRef.current = null;
+    }
+
+    return () => {
+      // Cleanup on unmount or if deps change messily
+      if (pencilSoundRef.current) {
+        pencilSoundRef.current.stop();
+        pencilSoundRef.current = null;
+      }
+    };
+  }, [displayProgress, play]); // Re-eval if play function changes (it shouldn't) or progress updates
 
   useEffect(() => {
-    // Trigger exit ONLY when:
-    // 1. Loading is done (active=false, progress=100)
-    // 2. Scene is mounted and ready (ready=true)
-    if (realProgress >= 100 && !active && ready) {
-      startExit();
-    }
-  }, [realProgress, active, ready]);
+    const tracker = { val: displayProgress };
+    const distance = targetProgress - displayProgress;
 
-  // ---------------------------------------------------------------------------
-  // 2. EXIT TRANSITION
-  // ---------------------------------------------------------------------------
+    let duration = 0.5;
+
+    if (distance > 60) {
+      duration = 4.0;
+    } else if (distance > 30) {
+      duration = 2.5;
+    } else if (distance > 10) {
+      duration = 1.5;
+    } else if (distance > 0) {
+      duration = 0.8;
+    }
+
+    gsap.killTweensOf(tracker);
+
+    gsap.to(tracker, {
+      val: targetProgress,
+      duration: duration,
+      ease: "power2.out",
+      onUpdate: () => {
+        setDisplayProgress(val => Math.max(val, tracker.val));
+      }
+    });
+
+    return () => gsap.killTweensOf(tracker);
+  }, [targetProgress]);
+
+
+  // ----------------------------------------
+  // EXIT SEQUENCE
+  // ----------------------------------------
   const exitStarted = useRef(false);
 
+  useEffect(() => {
+    if (displayProgress >= 99.5 && ready && !exitStarted.current) {
+      startExit();
+    }
+  }, [displayProgress, ready]);
+
   const startExit = () => {
-    if (exitStarted.current) return;
     exitStarted.current = true;
 
-    // Small delay to ensure "100%" is felt
-    setTimeout(() => {
-      const tl = gsap.timeline({
-        onComplete: () => {
-          setIsDone(true);
-          onComplete?.();
-        }
-      });
+    // Final audio check
+    if (pencilSoundRef.current) {
+      pencilSoundRef.current.stop();
+      pencilSoundRef.current = null;
+    }
+    play('tear', { volume: 0.8 });
 
-      const getCenterOffset = () => {
-        if (!accentRef.current) return { x: 0, y: 0 };
-        const rect = accentRef.current.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        return {
-          x: window.innerWidth / 2 - centerX,
-          y: window.innerHeight / 2 - centerY
-        };
-      };
+    const tl = gsap.timeline({
+      onComplete: () => {
+        setIsDone(true);
+        onComplete?.();
+      }
+    });
 
-      const offset = getCenterOffset();
+    // 1. Wait a moment 
+    tl.to({}, { duration: 0.3 });
 
-      // Step 1: Fade out "IT" and "M" cleanly
-      tl.to('.preloader__logo-text', {
-        x: (i) => i === 0 ? -60 : 60, // Slide out slightly
-        opacity: 0,
-        filter: 'blur(10px)', // Cinematic blur out
-        duration: 0.8,
-        ease: 'power3.in'
-      });
+    // REMOVED: Hiding the drawn line. Now it splits!
 
-      // Step 2: Center the "O"
-      tl.to(accentRef.current, {
-        x: offset.x,
-        y: offset.y,
-        scale: 1.1,
-        duration: 1.0,
-        ease: 'power3.inOut'
-      }, '-=0.6');
+    // 2. Tear Apart
+    tl.to(leftHalfRef.current, {
+      xPercent: -100,
+      rotation: -2,
+      duration: 2.5,
+      ease: "power3.inOut"
+    }, 'tear');
 
-      // Step 3: Portal Open - ALLOW INTERACTION NOW
-      tl.call(() => {
-        if (containerRef.current) {
-          containerRef.current.style.pointerEvents = 'none';
-        }
-      }, null, '+=0.1');
+    tl.to(rightHalfRef.current, {
+      xPercent: 100,
+      rotation: 2,
+      duration: 2.5,
+      ease: "power3.inOut"
+    }, 'tear');
 
-      tl.to(containerRef.current, {
-        '--mask-size': '150vmax',
-        duration: 2.7,
-        ease: 'expo.inOut' // Classic elegant ease
-      }, '+=0.1');
-
-      tl.to(accentRef.current, {
-        scale: 50,
-        opacity: 0,
-        duration: 2.5,
-        ease: 'expo.inOut'
-      }, '<');
-
-      // Final cleanup
-      tl.to(containerRef.current, {
-        opacity: 0,
-        duration: 0.5
-      }, '-=0.5');
-
-    }, 300);
+    // 3. Fade container
+    tl.to(containerRef.current, {
+      opacity: 0,
+      duration: 1
+    }, '-=1');
   };
 
   if (isDone) return null;
 
-  // Calculate stroke offset based on visualProgress
-  // We simply pass the target value to the style, and CSS transition handles the rest.
-  const safeProgress = Math.min(100, Math.max(0, visualProgress));
-  const strokeOffset = CIRCUMFERENCE - (CIRCUMFERENCE * safeProgress) / 100;
+  const pathLength = 120;
+  const safeProgress = Math.min(100, Math.max(0, displayProgress));
+  const strokeDashoffset = pathLength - (pathLength * safeProgress) / 100;
+  const percentageText = `${Math.round(safeProgress)}%`;
+
+  // Reusable SVG Line Component to ensure consistency
+  const TearLineSVG = () => (
+    <svg
+      className="preloader__overlay" // Keep class for positioning (absolute 0 0)
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      style={{ pointerEvents: 'none' }}
+    >
+      <path
+        d={svgPathData}
+        fill="none"
+        stroke="#1a1a1a"
+        strokeWidth="0.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{
+          strokeDasharray: pathLength,
+          strokeDashoffset: strokeDashoffset,
+        }}
+      />
+    </svg>
+  );
 
   return (
-    <div ref={containerRef} className="preloader">
-      <div className="preloader__content">
-        <div className="preloader__logo" ref={logoRef}>
-
-          <span className="preloader__logo-text">IT</span>
-
-          <div ref={accentRef} className="preloader__logo-accent-wrapper">
-            <svg viewBox="0 0 100 100" className="preloader__logo-accent">
-
-              {/* Track - subtle gray */}
-              <circle
-                cx="50" cy="50" r="40"
-                fill="none"
-                stroke="#e0e0e0"
-                strokeWidth="6"
-                style={{ opacity: 0.4 }}
-              />
-
-              {/* Progress - Neon Green 
-                  Using inline style for transition to ensure CSS handles the tweening
-              */}
-              <circle
-                className="preloader__logo-accent-progress"
-                cx="50" cy="50" r="40"
-                fill="none"
-                stroke="#39FF14"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={CIRCUMFERENCE}
-                style={{
-                  strokeDashoffset: strokeOffset,
-                  transition: 'stroke-dashoffset 0.5s ease-out'
-                }}
-                transform="rotate(-90 50 50)"
-              />
-            </svg>
-          </div>
-
-          <span className="preloader__logo-text">M</span>
+    <div className="preloader" ref={containerRef}>
+      {/* LEFT HALF */}
+      <div
+        className="preloader__half preloader__half--left"
+        ref={leftHalfRef}
+        style={{ clipPath: leftClipPoly }}
+      >
+        {/* Content: Percentage & Line */}
+        <div className="preloader__percentage">
+          {percentageText}
         </div>
+        {/* SVG is now INSIDE the clipped half */}
+        <TearLineSVG />
       </div>
+
+      {/* RIGHT HALF */}
+      <div
+        className="preloader__half preloader__half--right"
+        ref={rightHalfRef}
+        style={{ clipPath: rightClipPoly }}
+      >
+        {/* Content: Percentage & Line */}
+        <div className="preloader__percentage">
+          {percentageText}
+        </div>
+        {/* SVG is now INSIDE the clipped half */}
+        <TearLineSVG />
+      </div>
+
+      {/* REMOVED: Standalone Overlay SVG */}
     </div>
   );
 };
