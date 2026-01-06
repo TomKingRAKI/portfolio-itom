@@ -58,11 +58,11 @@ const CorridorSegment = ({
                 color: '#e6f5ef'
             },
             {
-                id: `diary-${segmentIndex}`,
+                id: `about-${segmentIndex}`,
                 relativeZ: -48,
                 side: 'left',
-                label: 'DEV DIARY',
-                icon: '✎',
+                label: 'THE ABOUT',
+                icon: '★',
                 color: '#efe6f5'
             },
             {

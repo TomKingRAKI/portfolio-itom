@@ -29,9 +29,10 @@ const DOOR_ALIGN_X = 1.2;
 const DOOR_TEXTURES = {
     'THE GALLERY': '/textures/corridor/doors/drzwiprojekty.webp',
     'THE STUDIO': '/textures/corridor/doors/drzwisocial.webp',
-    'DEV DIARY': '/textures/corridor/doors/drzwiabout.webp',
+    'THE ABOUT': '/textures/corridor/doors/drzwiabout.webp',
     "LET'S CONNECT": '/textures/corridor/doors/drzwikontakt.webp',
 };
+
 
 /**
  * DoorSection Component
@@ -543,7 +544,7 @@ const DoorSection = ({
     const SIGN_TEXTURES = {
         'THE GALLERY': '/textures/corridor/thegallerysign.webp',
         'THE STUDIO': '/textures/corridor/thestudiosign.webp',
-        'DEV DIARY': '/textures/corridor/aboutsign.webp',
+        'THE ABOUT': '/textures/corridor/aboutsign.webp',
         "LET'S CONNECT": '/textures/corridor/contactsign.webp',
     };
 
