@@ -52,6 +52,9 @@ const useInfiniteCamera = ({
     // Limits for swipe glance (in radians, ~15 degrees each way)
     const MAX_SWIPE_GLANCE = 0.26;
 
+    // Store last known mouse position (normalized -1 to 1)
+    const lastMousePos = useRef({ x: 0, y: 0 });
+
     // Update enabled refs
     useEffect(() => {
         const wasScrollEnabled = scrollEnabledRef.current;
@@ -63,12 +66,19 @@ const useInfiniteCamera = ({
             justEnabled.current = true;
             targetZ.current = camera.position.z;
             currentZ.current = camera.position.z;
-            // Sync Y from actual camera position (0.2 is base)
-            const currentY = camera.position.y - 0.2;
-            parallax.current = { x: camera.position.x, y: currentY };
-            targetParallax.current = { x: 0, y: 0 }; // Will smoothly go to neutral
+
+            // CRITICAL FIX: Sync parallax to CURRENT camera position (not neutral)
+            // This prevents the camera from jumping to mouse position
+            parallax.current = { x: camera.position.x, y: camera.position.y - 0.2 };
+
+            // Set target to where mouse currently is (smooth transition TO mouse)
+            // Instead of neutral {0, 0} which would cause snap
+            targetParallax.current = {
+                x: lastMousePos.current.x * parallaxIntensity,
+                y: -lastMousePos.current.y * parallaxIntensity * 0.5
+            };
         }
-    }, [scrollEnabled, parallaxEnabled, camera]);
+    }, [scrollEnabled, parallaxEnabled, camera, parallaxIntensity]);
 
     // Handle wheel scroll (desktop)
     const handleWheel = useCallback((e) => {
@@ -79,12 +89,19 @@ const useInfiniteCamera = ({
         targetZ.current -= delta;
     }, [scrollSpeed]);
 
-    // Handle mouse parallax (desktop) - works independently of scroll
+    // Handle mouse parallax (desktop) - ALWAYS tracks mouse position
+    // but only applies to targetParallax when enabled
     const handleMouseMove = useCallback((e) => {
+        // Always track mouse position for smooth transition when enabled
+        const normalizedX = (e.clientX / window.innerWidth) * 2 - 1;
+        const normalizedY = (e.clientY / window.innerHeight) * 2 - 1;
+        lastMousePos.current = { x: normalizedX, y: normalizedY };
+
+        // Only apply parallax when enabled
         if (!parallaxEnabledRef.current) return;
 
-        targetParallax.current.x = ((e.clientX / window.innerWidth) * 2 - 1) * parallaxIntensity;
-        targetParallax.current.y = -((e.clientY / window.innerHeight) * 2 - 1) * parallaxIntensity * 0.5;
+        targetParallax.current.x = normalizedX * parallaxIntensity;
+        targetParallax.current.y = -normalizedY * parallaxIntensity * 0.5;
     }, [parallaxIntensity]);
 
     // Handle touch start (mobile)

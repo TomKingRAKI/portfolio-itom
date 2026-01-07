@@ -722,15 +722,15 @@ const EntranceDoors = ({
                 </mesh>
             )}
 
-            {/* INK SPLASH - appears when bug is clicked */}
+            {/* INK SPLASH - always mounted to preload texture/shader */}
             <mesh
                 ref={inkSplashRef}
                 position={[2.5, floorY + 2.8, 0.17]}
                 scale={[0, 0, 0]}
-                visible={isBugClicked}
+            // Removed conditional 'visible' to ensure GPU upload
             >
                 <planeGeometry args={[2, 2]} />
-                <meshStandardMaterial
+                <meshBasicMaterial
                     map={inkSplashTexture}
                     transparent={true}
                     alphaTest={0.01}
@@ -738,23 +738,22 @@ const EntranceDoors = ({
                 />
             </mesh>
 
-            {/* BUG FIXED! Text - pencil drawing effect */}
-            {isBugClicked && textVisible && (
-                <Text
-                    ref={bugFixedTextRef}
-                    position={[bugClickPos.current.x || 2.5, (bugClickPos.current.y || (floorY + 2.8)), 0.35]}
-                    fontSize={0.18}
-                    color="#1a1a1a"
-                    anchorX="center"
-                    anchorY="middle"
-                    font={FONT_URL}
-                    outlineWidth={0.015}
-                    outlineColor="#ffffff"
-                    clipRect={[-1, -0.5, -1 + (clipProgress * 2.5), 0.5]}
-                >
-                    BUG FIXED!
-                </Text>
-            )}
+            {/* BUG FIXED! Text - always mounted to preload font */}
+            <Text
+                ref={bugFixedTextRef}
+                position={[2.5, floorY + 2.8, 0.35]} // Default pos, updated on click
+                fontSize={0.18}
+                color="#1a1a1a"
+                anchorX="center"
+                anchorY="middle"
+                font={FONT_URL}
+                outlineWidth={0.015}
+                outlineColor="#ffffff"
+                clipRect={[-1, -0.5, -1 + (clipProgress * 2.5), 0.5]}
+                visible={isBugClicked && textVisible} // Toggle visibility only
+            >
+                BUG FIXED!
+            </Text>
 
 
 

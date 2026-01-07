@@ -12,12 +12,11 @@ const Experience = lazy(() => import('./components/canvas/Experience'));
 
 import './styles/main.scss';
 
-// --- ASSET PRELOADING ---
-useTexture.preload('/images/avatar-thinking.webp');
-useTexture.preload('/textures/paper-texture.webp');
-useTexture.preload('/images/avatar-happy.webp');
-useTexture.preload('/images/avatar-hero.webp');
-useTexture.preload('/images/ink-splash.webp');
+// --- BATCH ASSET PRELOADING ---
+// This preloads ALL entrance and corridor textures during the preloader phase
+// Room textures are NOT preloaded - they load on-demand when user clicks a door
+import { PRELOAD_ALL } from './config/texturePreloadList';
+PRELOAD_ALL.forEach(path => useTexture.preload(path));
 
 const FONT_URL = 'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff';
 
@@ -41,7 +40,7 @@ const GlobalAudioEnabler = () => {
 function AppContent() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
-  
+
   // Use Performance Context
   const { settings, downgradeTier, tier } = usePerformance();
 
@@ -85,8 +84,8 @@ function AppContent() {
             />
 
             <Suspense fallback={null}>
-              <Experience 
-                isLoaded={isLoaded} 
+              <Experience
+                isLoaded={isLoaded}
                 onSceneReady={handleSceneReady}
                 performanceTier={tier} // Pass tier to Experience
               />

@@ -30,28 +30,28 @@ const TearLineSVG = ({ svgPathData, pathLength, strokeDashoffset }) => (
 const RingLoader = () => (
   <div className="preloader__ring">
     <svg width="120" height="120" viewBox="0 0 100 100" style={{ overflow: 'visible' }}>
-       <circle 
-         cx="50" cy="50" r="45"
-         fill="none" 
-         stroke="#000" 
-         strokeWidth="1.5"
-         strokeLinecap="round"
-         strokeDasharray="10 15"
-         opacity="0.8"
-       />
-       <circle 
-         cx="50" cy="50" r="35"
-         fill="none" 
-         stroke="#000" 
-         strokeWidth="1"
-         strokeLinecap="round"
-         strokeDasharray="5 10"
-         opacity="0.5"
-         style={{
-           animation: 'ring-spin-reverse 4s linear infinite',
-           transformOrigin: '50% 50%'
-         }}
-       />
+      <circle
+        cx="50" cy="50" r="45"
+        fill="none"
+        stroke="#000"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeDasharray="10 15"
+        opacity="0.8"
+      />
+      <circle
+        cx="50" cy="50" r="35"
+        fill="none"
+        stroke="#000"
+        strokeWidth="1"
+        strokeLinecap="round"
+        strokeDasharray="5 10"
+        opacity="0.5"
+        style={{
+          animation: 'ring-spin-reverse 4s linear infinite',
+          transformOrigin: '50% 50%'
+        }}
+      />
     </svg>
     <style>{`
       @keyframes ring-spin {
@@ -192,13 +192,13 @@ const Preloader = ({ onComplete, ready }) => {
     let duration = 0.5;
 
     if (distance > 60) {
-      duration = 4.0;
-    } else if (distance > 30) {
-      duration = 2.5;
-    } else if (distance > 10) {
       duration = 1.5;
+    } else if (distance > 30) {
+      duration = 1.0;
+    } else if (distance > 10) {
+      duration = 0.6;
     } else if (distance > 0) {
-      duration = 0.8;
+      duration = 0.4;
     }
 
     gsap.killTweensOf(tracker);
@@ -243,29 +243,29 @@ const Preloader = ({ onComplete, ready }) => {
       }
     });
 
-    // 1. Wait a moment 
-    tl.to({}, { duration: 0.3 });
+    // 1. Quick pause before tear
+    tl.to({}, { duration: 0.1 });
 
     // 2. Tear Apart
     tl.to(leftHalfRef.current, {
       xPercent: -100,
       rotation: -2,
-      duration: 2.5,
+      duration: 1.8,
       ease: "power3.inOut"
     }, 'tear');
 
     tl.to(rightHalfRef.current, {
       xPercent: 100,
       rotation: 2,
-      duration: 2.5,
+      duration: 1.8,
       ease: "power3.inOut"
     }, 'tear');
 
     // 3. Fade container
     tl.to(containerRef.current, {
       opacity: 0,
-      duration: 1
-    }, '-=1');
+      duration: 0.5
+    }, '-=0.5');
   };
 
   if (isDone) return null;
@@ -288,7 +288,7 @@ const Preloader = ({ onComplete, ready }) => {
           {percentageText}
           <RingLoader />
         </div>
-        
+
         {/* SVG is now INSIDE the clipped half */}
         <TearLineSVG svgPathData={svgPathData} pathLength={pathLength} strokeDashoffset={strokeDashoffset} />
       </div>
