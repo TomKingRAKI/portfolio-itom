@@ -3,7 +3,14 @@ import { useFrame } from '@react-three/fiber';
 import { useScroll, Text } from '@react-three/drei';
 import * as THREE from 'three';
 
-const AboutRoom = ({ showRoom }) => {
+const AboutRoom = ({ showRoom, onReady }) => {
+    // Signal that room is ready for door to open
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onReady?.();
+        }, 400); // Wait for GPU to finish rendering
+        return () => clearTimeout(timer);
+    }, [onReady]);
     // Config
     const TUNNEL_LENGTH = 50;
 

@@ -101,7 +101,7 @@ const RoomInterior = memo(({ label, showRoom, onReady }) => {
                         // Positioned at the end of the corridor
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <GalleryRoom showRoom={showRoom} />
+                                <GalleryRoom showRoom={showRoom} onReady={onReady} />
                             </Suspense>
                         </group>
                     ) : label === 'THE STUDIO' ? (
@@ -115,14 +115,14 @@ const RoomInterior = memo(({ label, showRoom, onReady }) => {
                         // === NEW ABOUT ROOM ===
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <AboutRoom showRoom={showRoom} />
+                                <AboutRoom showRoom={showRoom} onReady={onReady} />
                             </Suspense>
                         </group>
                     ) : label === "LET'S CONNECT" ? (
                         // === NEW CONTACT ROOM ===
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <ContactRoom showRoom={showRoom} />
+                                <ContactRoom showRoom={showRoom} onReady={onReady} />
                             </Suspense>
                         </group>
                     ) : (

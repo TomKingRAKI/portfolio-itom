@@ -83,7 +83,7 @@ const StudioRoom = ({ showRoom, onReady }) => {
         // Small delay to ensure all geometry is created
         const timer = setTimeout(() => {
             onReady?.();
-        }, 100);
+        }, 400); // Wait for GPU to finish rendering
         return () => clearTimeout(timer);
     }, [onReady]);
 

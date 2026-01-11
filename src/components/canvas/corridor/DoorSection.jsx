@@ -324,7 +324,18 @@ const DoorSection = ({
                 // 1. Camera is now aligned.
                 // 2. Start rendering the room.
                 // 3. Door will open when room signals ready via onReady callback
+                //    OR after fallback timeout for rooms without onReady support
                 setShouldRenderRoom(true);
+
+                // Fallback: If room doesn't call onReady within 500ms, open door anyway
+                // This ensures all rooms work even if they don't implement onReady
+                setTimeout(() => {
+                    if (!roomReadyRef.current) {
+                        roomReadyRef.current = true;
+                        setRoomReady(true);
+                        openDoor();
+                    }
+                }, 500);
             }
         });
     }, [camera, side, isOpen, isAnimating, setCameraOverride]);

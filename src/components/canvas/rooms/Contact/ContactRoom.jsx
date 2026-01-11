@@ -1,9 +1,16 @@
-import { useRef, useMemo, useState } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useCursor, Text, Html } from '@react-three/drei';
 import * as THREE from 'three';
 
-const ContactRoom = ({ showRoom }) => {
+const ContactRoom = ({ showRoom, onReady }) => {
+    // Signal that room is ready for door to open
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onReady?.();
+        }, 400); // Wait for GPU to finish rendering
+        return () => clearTimeout(timer);
+    }, [onReady]);
     // Refs
     const groupRef = useRef();
     const receiverRef = useRef();

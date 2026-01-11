@@ -7,11 +7,19 @@ import gsap from 'gsap';
 const PROJECT_COUNT = 5; // Placeholder count
 const GAP = 2.5; // Distance between cards
 
-const GalleryRoom = ({ showRoom }) => {
+const GalleryRoom = ({ showRoom, onReady }) => {
     const groupRef = useRef();
     const [scrollOffset, setScrollOffset] = useState(0);
     const targetScroll = useRef(0);
     const currentScroll = useRef(0);
+
+    // Signal that room is ready for door to open
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onReady?.();
+        }, 400); // Wait for GPU to finish rendering
+        return () => clearTimeout(timer);
+    }, [onReady]);
 
     // Config
     const BALCONY_WIDTH = 5;
