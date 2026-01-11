@@ -7,6 +7,7 @@ import { AudioProvider, useAudio } from './context/AudioManager';
 import { PerformanceProvider, usePerformance } from './context/PerformanceContext';
 import { SceneProvider } from './context/SceneContext';
 import NavigationUI from './components/ui/NavigationUI';
+import GlobalOverlay from './components/ui/GlobalOverlay';
 
 // Lazy load the heavy 3D experience
 const Experience = lazy(() => import('./components/canvas/Experience'));
@@ -97,7 +98,12 @@ function AppContent() {
           </div>
 
           {/* Navigation UI - Hamburger, Map, Back, Audio */}
-          {isLoaded && <NavigationUI />}
+          {isLoaded && (
+            <>
+              <NavigationUI />
+              <GlobalOverlay />
+            </>
+          )}
 
           {/* 2D Preloader */}
           <Preloader
