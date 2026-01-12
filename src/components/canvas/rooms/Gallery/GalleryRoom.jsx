@@ -4,6 +4,7 @@ import { Text, useTexture, Float } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { useScene } from '../../../../context/SceneContext';
+import PaperMaterial from './PaperMaterial';
 
 const PROJECT_COUNT = 10; // Placeholder count
 const GAP = 2.5; // Distance between cards
@@ -53,25 +54,25 @@ const GalleryRoom = ({ showRoom, onReady }) => {
         const totalWidth = PROJECT_COUNT * GAP;
         const targetScrollValue = index * GAP;
         const currentScrollValue = currentScroll.current;
-        
+
         // Find the shortest path (accounting for infinity scroll wrap)
         let diff = targetScrollValue - currentScrollValue;
-        
+
         // Normalize diff to be within [-halfWidth, halfWidth]
         const halfWidth = totalWidth / 2;
         while (diff > halfWidth) diff -= totalWidth;
         while (diff < -halfWidth) diff += totalWidth;
-        
+
         // Target is current + shortest diff
         const finalTarget = currentScrollValue + diff;
-        
+
         // Animate BOTH targetScroll and currentScroll so there's no lerp delay
         gsap.to(targetScroll, {
             current: finalTarget,
             duration: 0.5,
             ease: 'power2.inOut'
         });
-        
+
         gsap.to(currentScroll, {
             current: finalTarget,
             duration: 0.5,
@@ -115,7 +116,7 @@ const GalleryRoom = ({ showRoom, onReady }) => {
             floor: floorMat,
             railing: new THREE.MeshStandardMaterial({ color: '#2a2a2a', roughness: 0.8 }), // Dark iron/wood
             rope: new THREE.MeshStandardMaterial({ color: '#000000', roughness: 1 }), // Black rope
-            card: new THREE.MeshStandardMaterial({ color: '#ffffff', side: THREE.DoubleSide, roughness: 0.6 }) // White paper
+            // card material handled individually
         };
     }, [floorTexture]);
 
@@ -138,28 +139,28 @@ const GalleryRoom = ({ showRoom, onReady }) => {
     // Floor Shape (Trapezoid/Triangle) - Narrow at entrance, Wide at railing
     const floorShape = useMemo(() => {
         const shape = new THREE.Shape();
-        
+
         // --- INSTRUKCJA EDYCJI KSZTAŁTU (HOW TO EDIT) ---
         // X = Pierwsza liczba (Szerokość). Np. 1.1 to połowa szerokości 2.2.
         // Y = Druga liczba (Głębokość). 
         //     -2.0 to TYŁ (przy wejściu). 
         //     4.6 to PRZÓD (przy barierce).
-        
+
         // 1. Lewy Tył (Przy wejściu)
-        shape.moveTo(-1.1, -2.0); 
-        
+        shape.moveTo(-1.1, -2.0);
+
         // 2. Prawy Tył (Przy wejściu)
-        shape.lineTo(1.1, -2.0);  
-        
+        shape.lineTo(1.1, -2.0);
+
         // 3. Prawy Przód (Szeroki balkon)
-        shape.lineTo(7.5, 4);   
-        
+        shape.lineTo(7.5, 4);
+
         // 4. Lewy Przód (Szeroki balkon)
-        shape.lineTo(-7.5, 4);  
-        
+        shape.lineTo(-7.5, 4);
+
         // Zamknięcie kształtu (powrót do początku)
-        shape.lineTo(-1.1, -2.0); 
-        
+        shape.lineTo(-1.1, -2.0);
+
         return shape;
     }, []);
 
@@ -186,9 +187,9 @@ const GalleryRoom = ({ showRoom, onReady }) => {
                 {/* Floor - Trapezoid/Triangle Shape */}
                 <mesh
                     rotation={[-Math.PI / 2, 0, 0]}
-                    position={[0, 0, 0]} 
+                    position={[0, 0, 0]}
                 >
-                    <shapeGeometry args={[floorShape]} /> 
+                    <shapeGeometry args={[floorShape]} />
                     <primitive object={materials.floor} />
                 </mesh>
 
@@ -258,6 +259,7 @@ const GalleryRoom = ({ showRoom, onReady }) => {
 // Sub-component for individual project cards
 const ProjectCard = ({ index, currentScroll, materials, curve, isSelected, scrollToIndex, onSelect, onDeselect }) => {
     const cardRef = useRef();
+    const materialRef = useRef(); // Ref for the PaperMaterial
     const [hovered, setHovered] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);  // True ONLY during flip animation
     const [isScrolling, setIsScrolling] = useState(false);  // True during scroll phase
@@ -266,7 +268,7 @@ const ProjectCard = ({ index, currentScroll, materials, curve, isSelected, scrol
     const originalPos = useRef({ x: 0, y: 0, z: 0 });
 
     // Random sway properties
-    const swaySpeed = useRef(Math.random() * 0.5 + 0.5);
+    const swaySpeed = useRef(Math.random() * 0.2 + 0.3); // Slower sway speed
     const swayOffset = useRef(Math.random() * 100);
 
     // The actual fly animation (called after scroll centers the card)
@@ -281,9 +283,10 @@ const ProjectCard = ({ index, currentScroll, materials, curve, isSelected, scrol
         }
 
         // Target position: in front of camera (after the flip)
+        // 🎛️ ADJUST FINAL POSITION HERE:
         const targetX = 0;
-        const targetY = -1;
-        const targetZ = 1;
+        const targetY = -1; // <--- Y: Height (Lower = -0.8, Higher = 0.0)
+        const targetZ = 1.5;  // <--- Z: Distance from camera (Closer = 2.0, Further = 1.0)
 
         const timeline = gsap.timeline({
             onComplete: () => {
@@ -292,79 +295,94 @@ const ProjectCard = ({ index, currentScroll, materials, curve, isSelected, scrol
             }
         });
 
-        // ===== PHASE 1: Quick tug DOWN (detach feel) =====
+        // Initialize bend
+        if (materialRef.current) materialRef.current.bend = 0;
+
+        // ===== PHASE 1: Quick tug DOWN + Drag Bend =====
+        // Card is pulled down, so paper bends UP (positive bend)
         timeline.to(cardRef.current.position, {
-            y: originalPos.current.y - 0.6,
-            duration: 0.12,
+            y: originalPos.current.y - 0.5,
+            duration: 0.15,
             ease: 'power2.out'
         });
 
         timeline.to(cardRef.current.rotation, {
-            x: 0.4,
-            z: -0.1,
-            duration: 0.12,
+            x: 0.5, // Lean forward slightly
+            z: -0.05,
+            duration: 0.15,
             ease: 'power2.out'
         }, '<');
 
-        // ===== PHASE 2: Smooth arc with paper flutter =====
+        // BEND: Drag effect
+        if (materialRef.current) {
+            timeline.to(materialRef.current, {
+                bend: 0.8, // Heavy bend from air resistance
+                duration: 0.15,
+                ease: 'power2.out'
+            }, '<');
+        }
+
+        // ===== PHASE 2: Flip Up + Release Bend =====
+        // Flying up and over
         timeline.to(cardRef.current.position, {
-            y: originalPos.current.y + 0.8,
-            x: originalPos.current.x * 0.4,
-            z: originalPos.current.z + 2,
-            duration: 0.3,
-            ease: 'sine.out'
+            y: originalPos.current.y + 0.6, // Lower arc (was 1.2)
+            x: originalPos.current.x * 0.2, // Centering
+            z: originalPos.current.z + 1.5, // Move forward
+            duration: 0.4,
+            ease: 'power1.out' // Momentum carries it out
         });
 
         timeline.to(cardRef.current.rotation, {
-            x: Math.PI * 0.6,
-            z: 0.12,
-            y: -0.05,
-            duration: 0.3,
-            ease: 'sine.inOut'
+            x: Math.PI * 0.8, // Almost flipped
+            z: 0.05,
+            y: -0.02,
+            duration: 0.4,
+            ease: 'power1.inOut'
         }, '<');
 
-        // ===== PHASE 3: Complete flip while floating forward =====
-        timeline.to(cardRef.current.position, {
-            y: targetY + 0.3,
-            x: targetX,
-            z: targetZ + 0.5,
-            duration: 0.28,
-            ease: 'sine.inOut'
-        });
+        // BEND: As it slows at top, bend relaxes/reverses
+        if (materialRef.current) {
+            timeline.to(materialRef.current, {
+                bend: -0.3, // Subtle reverse curl at apex
+                duration: 0.4,
+                ease: 'power1.inOut'
+            }, '<');
+        }
 
-        timeline.to(cardRef.current.rotation, {
-            x: Math.PI,
-            z: -0.08,
-            y: 0.03,
-            duration: 0.28,
-            ease: 'sine.inOut'
-        }, '<');
-
-        // ===== PHASE 4: Gentle settle into final position =====
+        // ===== PHASE 3: Float Down to Target =====
         timeline.to(cardRef.current.position, {
             y: targetY,
             x: targetX,
             z: targetZ,
-            duration: 0.2,
-            ease: 'circ.out'
+            duration: 0.4,
+            ease: 'power3.out' // Smooth landing, no overshoot
         });
 
         timeline.to(cardRef.current.rotation, {
-            x: Math.PI,
+            x: Math.PI, // Flat facing cam
             y: 0,
             z: 0,
-            duration: 0.25,
-            ease: 'sine.out'
+            duration: 0.4,
+            ease: 'power3.out'
         }, '<');
+
+        // BEND: Settle to flat
+        if (materialRef.current) {
+            timeline.to(materialRef.current, {
+                bend: 0,
+                duration: 0.5,
+                ease: 'power2.out' // Smooth flatten
+            }, '<');
+        }
 
         // Gentle scale
         timeline.to(cardRef.current.scale, {
-            x: 1.15,
-            y: 1.15,
-            z: 1.15,
-            duration: 0.2,
+            x: 1.1,
+            y: 1.1,
+            z: 1.1,
+            duration: 0.3,
             ease: 'sine.out'
-        }, '-=0.15');
+        }, '-=0.4');
     };
 
     // Click handler - fly to camera OR return to clothesline
@@ -383,65 +401,61 @@ const ProjectCard = ({ index, currentScroll, materials, curve, isSelected, scrol
                 }
             });
 
-            // REVERSE PHASE 4: Lift from final position
+            // REVERSE PHASE: Lift and Bend
             timeline.to(cardRef.current.position, {
-                y: originalPos.current.y + 0.8,
-                x: originalPos.current.x * 0.4,
-                z: originalPos.current.z + 2,
-                duration: 0.25,
-                ease: 'sine.out'
+                y: originalPos.current.y + 0.6, // Lower arc (was 1.0)
+                x: originalPos.current.x * 0.5,
+                z: originalPos.current.z + 1,
+                duration: 0.35,
+                ease: 'power2.in'
             });
 
             timeline.to(cardRef.current.rotation, {
-                x: Math.PI * 0.6,
-                z: 0.12,
-                y: -0.05,
-                duration: 0.25,
-                ease: 'sine.out'
-            }, '<');
-
-            // Reset scale
-            timeline.to(cardRef.current.scale, {
-                x: 1,
-                y: 1,
-                z: 1,
-                duration: 0.2,
-                ease: 'sine.out'
-            }, '<');
-
-            // REVERSE PHASE 3: Arc back over railing (reverse flip)
-            timeline.to(cardRef.current.position, {
-                y: originalPos.current.y + 0.5,
-                x: originalPos.current.x * 0.7,
-                z: originalPos.current.z + 0.8,
-                duration: 0.3,
-                ease: 'sine.inOut'
-            });
-
-            timeline.to(cardRef.current.rotation, {
-                x: 0.4,
-                z: -0.1,
+                x: 0.5,
+                z: -0.05,
                 y: 0,
-                duration: 0.3,
-                ease: 'sine.inOut'
+                duration: 0.35,
+                ease: 'power2.in'
             }, '<');
 
-            // REVERSE PHASE 2: Drop back onto clothesline (reverse of tug)
+            // BEND: Drag again as we pull it back
+            if (materialRef.current) {
+                timeline.to(materialRef.current, {
+                    bend: 0.6,
+                    duration: 0.3,
+                    ease: 'power2.in'
+                }, '<');
+            }
+
+            // RESET Scale
+            timeline.to(cardRef.current.scale, {
+                x: 1, y: 1, z: 1,
+                duration: 0.3, ease: 'sine.inOut'
+            }, '<');
+
+            // SNAP BACK
             timeline.to(cardRef.current.position, {
                 y: originalPos.current.y,
                 x: originalPos.current.x,
                 z: originalPos.current.z,
-                duration: 0.2,
-                ease: 'power2.out'
+                duration: 0.25,
+                ease: 'power3.out'
             });
 
             timeline.to(cardRef.current.rotation, {
-                x: 0,
-                y: 0,
-                z: 0,
+                x: 0, y: 0, z: 0,
                 duration: 0.25,
-                ease: 'sine.out'
+                ease: 'power3.out'
             }, '<');
+
+            // BEND: SNAP
+            if (materialRef.current) {
+                timeline.to(materialRef.current, {
+                    bend: 0,
+                    duration: 0.3,
+                    ease: 'power2.out'
+                }, '<');
+            }
 
             return;
         }
@@ -473,27 +487,19 @@ const ProjectCard = ({ index, currentScroll, materials, curve, isSelected, scrol
 
         // INFINITY SCROLL: Wrap displayX within visible range
         const totalWidth = PROJECT_COUNT * GAP;
+        // ... (scroll logic unchecked) ...
         let rawX = (index * GAP) - currentScroll.current;
-
-        // Wrap around: keep cards within -halfWidth to +halfWidth
         const halfWidth = totalWidth / 2;
         let displayX = ((rawX + halfWidth) % totalWidth + totalWidth) % totalWidth - halfWidth;
-
-        // Match the curve (Clothesline) exactly using the parameterized position 'u'
-        // Curve spans approx x=[-16, 16].
-        // Normalize displayX to u=[0, 1] based on curve width 32 (-16 to 16)
         const u = (displayX + 16) / 32;
-        
-        // Clamp u to avoid errors (though wrap logic keeps it safe usually)
         const safeU = THREE.MathUtils.clamp(u, 0, 1);
-        
         const pointOnCurve = curve.getPointAt(safeU);
 
         cardRef.current.position.set(pointOnCurve.x, pointOnCurve.y, pointOnCurve.z);
 
         // Wind / Sway Animation
         const time = state.clock.getElapsedTime();
-        const wind = Math.sin(time * swaySpeed.current + swayOffset.current) * 0.1;
+        const wind = Math.sin(time * swaySpeed.current + swayOffset.current) * 0.05; // Reduced sway amplitude
 
         // Rotate slightly based on movement + wind
         cardRef.current.rotation.z = wind;
@@ -520,11 +526,18 @@ const ProjectCard = ({ index, currentScroll, materials, curve, isSelected, scrol
 
             {/* The Paper / Card hanging down */}
             {/* Pivot is at top (0,0,0) so we offset mesh down */}
+
             <group
                 position={[0, -1.1, 0]}
             >
-                <mesh material={materials.card}>
-                    <planeGeometry args={[1.5, 2]} />
+                <mesh>
+                    <planeGeometry args={[1.5, 2, 16, 16]} />
+                    <PaperMaterial
+                        ref={materialRef}
+                        color="#ffffff"
+                        side={THREE.DoubleSide}
+                        roughness={0.6}
+                    />
                 </mesh>
                 <Text
                     position={[0, 0, 0.01]}
