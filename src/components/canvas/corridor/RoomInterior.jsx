@@ -31,7 +31,7 @@ const SUBTITLES = {
  * Memoized room geometry to prevent re-renders and improve performance.
  * Contains corridor + giant room at the end.
  */
-const RoomInterior = memo(({ label, showRoom, onReady }) => {
+const RoomInterior = memo(({ label, showRoom, onReady, isExiting }) => {
     const { corridorWidth, corridorHeight, corridorDepth, roomWidth, roomHeight, roomDepth } = ROOM_CONFIG;
     const halfDepth = corridorDepth / 2;
     const roomZ = -corridorDepth - roomDepth / 2;
@@ -115,14 +115,14 @@ const RoomInterior = memo(({ label, showRoom, onReady }) => {
                         // === NEW ABOUT ROOM ===
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <AboutRoom showRoom={showRoom} onReady={onReady} />
+                                <AboutRoom showRoom={showRoom} onReady={onReady} isExiting={isExiting} />
                             </Suspense>
                         </group>
                     ) : label === "LET'S CONNECT" ? (
                         // === NEW CONTACT ROOM ===
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <ContactRoom showRoom={showRoom} onReady={onReady} />
+                                <ContactRoom showRoom={showRoom} onReady={onReady} isExiting={isExiting} />
                             </Suspense>
                         </group>
                     ) : (

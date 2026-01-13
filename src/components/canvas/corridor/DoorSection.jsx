@@ -471,11 +471,11 @@ const DoorSection = ({
                             setRoomReady(false);
                             roomReadyRef.current = false;
 
-                            requestAnimationFrame(() => {
-                                // Frame 3: Cleanup and context
+                            // Close door FIRST, then hide room after door closes
+                            closeDoor(() => {
+                                // Door is now closed - safe to hide room
                                 setShouldRenderRoom(false);
                                 contextExitRoom();
-                                closeDoor();
                                 setCameraOverride?.(false);
                             });
                         });
@@ -505,7 +505,7 @@ const DoorSection = ({
         }
     }, [exitRequested, isInsideRoom, isAnimating, clearExitRequest, exitRoom]);
 
-    const closeDoor = useCallback(() => {
+    const closeDoor = useCallback((onDoorClosed) => {
         if (!doorRef.current || !isOpen) return;
         if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
 
@@ -527,6 +527,8 @@ const DoorSection = ({
             onComplete: () => {
                 setIsOpen(false);
                 setIsAnimating(false);
+                // Call optional completion callback
+                onDoorClosed?.();
             }
         });
     }, [isOpen]);
@@ -643,7 +645,12 @@ const DoorSection = ({
 
                     {/* === DOOR INTERIOR CORRIDOR + ROOM === */}
                     {/* Always render, but pass showRoom prop for lazy loading giant room */}
-                    <RoomInterior label={label} showRoom={shouldRenderRoom} onReady={handleRoomReady} />
+                    <RoomInterior
+                        label={label}
+                        showRoom={shouldRenderRoom}
+                        onReady={handleRoomReady}
+                        isExiting={isInsideRoom && isAnimating}
+                    />
 
                     {/* === DOOR PANEL (pivots for opening) === */}
                     {/* Pivot Z at 0.01 to be slightly behind frame but in front of wall if needed, or just flush */}

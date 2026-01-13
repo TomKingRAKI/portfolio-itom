@@ -82,16 +82,44 @@ const GalleryRoom = ({ showRoom, onReady }) => {
     };
 
     // --- INTERACTION ---
+    // Desktop: mouse wheel
     useEffect(() => {
         const handleWheel = (e) => {
             if (!showRoom) return;
-            e.preventDefault(); // Prevent browser scroll blocking
-            // Horizontal scroll feeling - NO CLAMP for infinity!
+            e.preventDefault();
             targetScroll.current += e.deltaY * 0.005;
         };
 
         window.addEventListener('wheel', handleWheel, { passive: false });
         return () => window.removeEventListener('wheel', handleWheel);
+    }, [showRoom]);
+
+    // Mobile: horizontal touch swipe
+    const lastTouchX = useRef(0);
+    useEffect(() => {
+        if (!showRoom) return;
+
+        const handleTouchStart = (e) => {
+            if (e.touches.length === 1) {
+                lastTouchX.current = e.touches[0].clientX;
+            }
+        };
+
+        const handleTouchMove = (e) => {
+            if (e.touches.length === 1) {
+                const deltaX = lastTouchX.current - e.touches[0].clientX;
+                lastTouchX.current = e.touches[0].clientX;
+                // Horizontal swipe = scroll
+                targetScroll.current += deltaX * 0.008;
+            }
+        };
+
+        window.addEventListener('touchstart', handleTouchStart, { passive: true });
+        window.addEventListener('touchmove', handleTouchMove, { passive: true });
+        return () => {
+            window.removeEventListener('touchstart', handleTouchStart);
+            window.removeEventListener('touchmove', handleTouchMove);
+        };
     }, [showRoom]);
 
     useFrame((state, delta) => {
@@ -284,9 +312,11 @@ const ProjectCard = ({ index, currentScroll, materials, curve, isSelected, scrol
 
         // Target position: in front of camera (after the flip)
         // 🎛️ ADJUST FINAL POSITION HERE:
+        // Mobile gets card further from camera for better visibility
+        const isMobile = window.innerWidth < 768;
         const targetX = 0;
-        const targetY = -1; // <--- Y: Height (Lower = -0.8, Higher = 0.0)
-        const targetZ = 1.5;  // <--- Z: Distance from camera (Closer = 2.0, Further = 1.0)
+        const targetY = isMobile ? -0.8 : -1; // Slightly higher on mobile
+        const targetZ = isMobile ? 0.5 : 1.5;  // Further on mobile (smaller Z = further)
 
         const timeline = gsap.timeline({
             onComplete: () => {
