@@ -423,14 +423,42 @@ const DoorSection = ({
         const saved = savedCameraState.current;
         const aligned = doorAlignedState.current;
 
+        // Store current rotation as starting point for exit
+        // This captures the "tilted" state if coming from About/Flight
+        const startRotation = {
+            x: camera.rotation.x,
+            y: camera.rotation.y,
+            z: camera.rotation.z
+        };
+
         // REVERSE STEP 1: Walk backwards through corridor to ALIGNED position (in front of door)
-        // This prevents clipping through walls
+        // AND smoothly rotate to "aligned" state (level horizon)
+
+        // Proxy for Step 1 rotation
+        const step1RotationProxy = { ...startRotation };
+
+        // Target for Step 1: Position = aligned position (in front of door)
+        // Rotation = 0 pitch/bank, Y facing the door (approx same as aligned.rotationY)
+        // We assume 'aligned.rotationY' is the correct facing for the door
+
         gsap.to(camera.position, {
             x: aligned.x,
             y: aligned.y,
             z: aligned.z,
             duration: 1.5,
+            ease: 'power2.inOut'
+        });
+
+        // Simultaneously animate rotation to level out
+        gsap.to(step1RotationProxy, {
+            x: 0, // Level pitch
+            y: aligned.rotationY, // Face door
+            z: 0, // Level bank
+            duration: 1.5,
             ease: 'power2.inOut',
+            onUpdate: () => {
+                camera.rotation.set(step1RotationProxy.x, step1RotationProxy.y, step1RotationProxy.z);
+            },
             onComplete: () => {
                 // REVERSE STEP 2: Move back to original center position & rotate to original view
                 // This is the reverse of the "align to door" animation
@@ -444,36 +472,45 @@ const DoorSection = ({
                     ease: 'power2.inOut'
                 });
 
-                // 2b. Rotation (Full restore to avoid snap)
-                // We typically only animate Y for smoothness, but we should restore X/Z at the end too
-                const rotationProxy = { y: camera.rotation.y };
+                // 2b. Rotation
+                // Animate ALL axes to saved state
+                const step2RotationProxy = {
+                    x: camera.rotation.x,
+                    y: camera.rotation.y,
+                    z: camera.rotation.z
+                };
 
-                // Animate Y rotation smoothly
-                gsap.to(rotationProxy, {
+                gsap.to(step2RotationProxy, {
+                    x: saved.rotationX,
                     y: saved.rotationY,
+                    z: saved.rotationZ,
                     duration: 1.0,
                     ease: 'power2.inOut',
                     onUpdate: () => {
-                        camera.rotation.y = rotationProxy.y;
+                        camera.rotation.set(step2RotationProxy.x, step2RotationProxy.y, step2RotationProxy.z);
                     },
                     onComplete: () => {
-                        // Restore precise full rotation (including X/Z pitch/roll) before returning control
+                        // Restore precise full rotation (just in case)
                         camera.rotation.set(saved.rotationX, saved.rotationY, saved.rotationZ);
 
                         // Spread state updates across frames to prevent jank
-                        // Frame 1: Critical state
-                        setIsInsideRoom(false);
-                        setIsAnimating(false);
+                        // Frame 1: ANIMATION FINISHED BUT STATE STILL "INSIDE" TO PREVENT ROOM WAKEUP
+                        // We keep isInsideRoom=true and isAnimating=true (or effectively "exiting")
+                        // so that AboutRoom sees "isExiting" as true until it's unmounted.
 
                         requestAnimationFrame(() => {
-                            // Frame 2: Reset room state
-                            setIsTiltLocked(false);
-                            setRoomReady(false);
-                            roomReadyRef.current = false;
+                            // Frame 2: Close door FIRST
+                            // Room logic is still "held" in exit state
 
-                            // Close door FIRST, then hide room after door closes
+                            // Close door, THEN hide room and reset state
                             closeDoor(() => {
-                                // Door is now closed - safe to hide room
+                                // Door is now closed. NOW we are officially "out"
+                                setIsInsideRoom(false);
+                                setIsAnimating(false);
+                                setIsTiltLocked(false);
+                                setRoomReady(false);
+                                roomReadyRef.current = false;
+
                                 setShouldRenderRoom(false);
                                 contextExitRoom();
                                 setCameraOverride?.(false);

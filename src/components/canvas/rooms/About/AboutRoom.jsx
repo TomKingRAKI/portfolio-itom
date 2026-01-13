@@ -52,17 +52,10 @@ const AboutRoom = ({ showRoom, onReady, isExiting }) => {
 
         setDisplayProgress(scrollPosition.current);
 
-        // === EXITING: Straighten camera continuously while exiting ===
+        // === EXITING: Disable control completely ===
+        // DoorSection handles the exit animation (position + rotation)
+        // We must STOP touching the camera to avoid conflicts/snapping
         if (isExiting) {
-            // Quickly lerp back to 0 tilt
-            currentBank.current = THREE.MathUtils.lerp(currentBank.current, 0, 0.1);
-            currentPitch.current = THREE.MathUtils.lerp(currentPitch.current, 0, 0.1);
-
-            // Apply straightened rotation relative to base
-            if (isFlightActive.current) {
-                camera.rotation.x = baseCameraRotation.current.x + currentPitch.current;
-                camera.rotation.z = baseCameraRotation.current.z + currentBank.current;
-            }
             return;
         }
 
