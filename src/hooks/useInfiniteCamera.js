@@ -335,11 +335,44 @@ const useInfiniteCamera = ({
             parallax.current = { x: camera.position.x, y: camera.position.y - 0.2 };
             targetParallax.current = { x: camera.position.x, y: camera.position.y - 0.2 };
 
-            // Calculate correct glance for this position so we don't snap/jump
+            // Calculate "Ideal" glance for this position
             const initialGlance = calculateGlance(z, initSegment);
 
-            glanceOffset.current = initialGlance;
-            targetGlance.current = initialGlance;
+            // SOFT RESUME LOGIC:
+            // Check if our current physical rotation matches the "ideal" glance.
+            // If we just exited a room via teleport, we might be looking STRAIGHT (0),
+            // but the "ideal" glance wants us to look at the door (nonzero).
+            // Mismatch causes a SNAP.
+            // Fix: If there's a mismatch, initialize glanceOffset to match REALITY, not IDEAL.
+
+            // 1. Get current physical "glance" equivalent from rotation
+            // rotation.y ≈ parallax + glance * 3 + swipe * 4
+            // We assume parallax is synced above, swipe is 0.
+            // So: currentRotationY ≈ (parallax.x * 0.3) + (glance * 3)
+            // glance ≈ (currentRotationY - parallax.x * 0.3) / 3
+
+            // Note: We use the camera's actual rotation.
+            // We also need to account for the lookAt logic which isn't a pure rotation addition,
+            // but for small angles, this approximation is sufficient to prevent the snap.
+            const currentRotationY = camera.rotation.y;
+            const parallaxContribution = parallax.current.x * 0.3;
+            const derivedGlance = (currentRotationY - parallaxContribution) / 3;
+
+            // 2. Check difference
+            const diff = Math.abs(derivedGlance - initialGlance);
+
+            // 3. If difference is significant (e.g. > 0.05 rads approx 3 deg), use DERIVED
+            // This happens when we exit looking straight (0) but should be looking at door
+            if (diff > 0.02) {
+                // Initialize with current PHYSICAL state so we start from where we ARE
+                glanceOffset.current = derivedGlance;
+                // Target is still the IDEAL state, so we will smooth to it
+                targetGlance.current = initialGlance;
+            } else {
+                // We are close enough, just snap to ideal to be precise
+                glanceOffset.current = initialGlance;
+                targetGlance.current = initialGlance;
+            }
 
             // Reset swipe glance
             swipeGlance.current = 0;
