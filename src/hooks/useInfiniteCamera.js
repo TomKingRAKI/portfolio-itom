@@ -1,4 +1,5 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useLayoutEffect } from 'react';
+import gsap from 'gsap';
 import { useThree, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -56,27 +57,43 @@ const useInfiniteCamera = ({
     const lastMousePos = useRef({ x: 0, y: 0 });
 
     // Update enabled refs
-    useEffect(() => {
+    useLayoutEffect(() => {
         const wasScrollEnabled = scrollEnabledRef.current;
         scrollEnabledRef.current = scrollEnabled;
         parallaxEnabledRef.current = parallaxEnabled;
 
         // When scroll becomes enabled, sync with current camera position
         if (scrollEnabled && !wasScrollEnabled) {
+            // KILL GSAP TWEENS: Ensure no lingering entrance animations interfere
+            gsap.killTweensOf(camera.position);
+            gsap.killTweensOf(camera.rotation);
+            gsap.killTweensOf(camera.savedState); // Just in case
+
             justEnabled.current = true;
+
+            // FORCE RESET Camera X to 0 to prevent "looking left/right"
+            // The entrance animation might end slightly off-center
+            camera.position.x = 0;
+            camera.rotation.set(0, 0, 0); // Reset rotation to be safe
+
             targetZ.current = camera.position.z;
             currentZ.current = camera.position.z;
 
-            // CRITICAL FIX: Sync parallax to CURRENT camera position (not neutral)
-            // This prevents the camera from jumping to mouse position
-            parallax.current = { x: camera.position.x, y: camera.position.y - 0.2 };
+            // FIX: Set target to CURRENT camera position so it stays stable
+            // We do NOT want to pan to the mouse immediately, as the mouse might be
+            // far off-center (e.g. clicking a door handle).
+            // We force 0 because we just forced camera.position.x to 0 above
+            parallax.current = { x: 0, y: camera.position.y - 0.2 };
+            targetParallax.current = { x: 0, y: camera.position.y - 0.2 };
 
-            // Set target to where mouse currently is (smooth transition TO mouse)
-            // Instead of neutral {0, 0} which would cause snap
-            targetParallax.current = {
-                x: lastMousePos.current.x * parallaxIntensity,
-                y: -lastMousePos.current.y * parallaxIntensity * 0.5
-            };
+            // FORCE RESET GLANCE & SWIPE: Prevent any residual inputs from entrance phase
+            swipeGlance.current = 0;
+            targetSwipeGlance.current = 0;
+            glanceOffset.current = 0;
+            targetGlance.current = 0;
+
+            // Recalculate segment immediately to ensure glance calc is correct from frame 0
+            currentSegment.current = Math.floor((10 - currentZ.current) / segmentLength);
         }
     }, [scrollEnabled, parallaxEnabled, camera, parallaxIntensity]);
 
@@ -231,45 +248,7 @@ const useInfiniteCamera = ({
             currentZ.current = THREE.MathUtils.lerp(currentZ.current, targetZ.current, smoothing);
 
             // Auto-glance proximity check
-            const zOffset = 10 - (currentSegment.current * segmentLength);
-            let bestStrength = 0;
-            let bestDir = 0;
-
-            // Tune these to shift the timing as requested
-            const START_DIST = 24; // Start looking early
-            const PEAK_DIST = 8;   // Max rotation happening BEFORE the door
-            const END_DIST = -2;   // Fully release just after passing (or 0 for exactly at door)
-
-            // Check doors in current segment
-            for (const door of DOOR_POSITIONS) {
-                const doorGlobalZ = zOffset + door.z;
-                const dist = currentZ.current - doorGlobalZ; // Positive = approaching
-
-                let strength = 0;
-
-                if (dist > PEAK_DIST && dist < START_DIST) {
-                    // Approach Phase: Ramp Up 0 -> 1
-                    strength = (START_DIST - dist) / (START_DIST - PEAK_DIST);
-                } else if (dist <= PEAK_DIST && dist > END_DIST) {
-                    // Release Phase: Ramp Down 1 -> 0
-                    // This starts centering the camera BEFORE we even pass the door
-                    strength = (dist - END_DIST) / (PEAK_DIST - END_DIST);
-                }
-
-                if (strength > 0) {
-                    // Smooth ease
-                    const easedStrength = strength * (2 - strength); // Ease out
-
-                    const dir = door.side === 'left' ? -1 : 1;
-                    if (easedStrength > bestStrength) {
-                        bestStrength = easedStrength;
-                        bestDir = dir;
-                    }
-                }
-            }
-
-            // Stronger multiplier (3.5x) for deeper glance
-            targetGlance.current = bestDir * bestStrength * glanceIntensity * 3.5;
+            targetGlance.current = calculateGlance(currentZ.current, currentSegment.current);
 
             // Dynamic smoothing: slow to look (0.03), fast to release (0.08)
             // This stops the camera from "dragging" after passing the door
@@ -305,26 +284,68 @@ const useInfiniteCamera = ({
         }
     });
 
-    // Function to enable/disable camera override
+    // Helper to calculate glance based on Z position
+    const calculateGlance = useCallback((z, segment) => {
+        const zOffset = 10 - (segment * segmentLength);
+        let bestStrength = 0;
+        let bestDir = 0;
+
+        const START_DIST = 15;
+        const PEAK_DIST = 8;
+        const END_DIST = -2;
+
+        for (const door of DOOR_POSITIONS) {
+            const doorGlobalZ = zOffset + door.z;
+            const dist = z - doorGlobalZ;
+
+            let strength = 0;
+            if (dist > PEAK_DIST && dist < START_DIST) {
+                strength = (START_DIST - dist) / (START_DIST - PEAK_DIST);
+            } else if (dist <= PEAK_DIST && dist > END_DIST) {
+                strength = (dist - END_DIST) / (PEAK_DIST - END_DIST);
+            }
+
+            if (strength > 0) {
+                const easedStrength = strength * (2 - strength);
+                const dir = door.side === 'left' ? -1 : 1;
+                if (easedStrength > bestStrength) {
+                    bestStrength = easedStrength;
+                    bestDir = dir;
+                }
+            }
+        }
+
+        return bestDir * bestStrength * glanceIntensity * 3.5;
+    }, [segmentLength, glanceIntensity]);
+
     // Function to enable/disable camera override
     const setCameraOverride = useCallback((active) => {
         cameraOverride.current = active;
         if (!active) {
             // When releasing override, sync our state with current camera position
-            targetZ.current = camera.position.z;
-            currentZ.current = camera.position.z;
+            const z = camera.position.z;
+            targetZ.current = z;
+            currentZ.current = z;
 
-            // Sync parallax - assuming X is mainly parallax driven
+            // Recalculate current segment immediately
+            const initSegment = Math.floor((10 - z) / segmentLength);
+            currentSegment.current = initSegment;
+
+            // Sync parallax
             parallax.current = { x: camera.position.x, y: camera.position.y - 0.2 };
             targetParallax.current = { x: camera.position.x, y: camera.position.y - 0.2 };
 
-            // Reset glances to prevent jumps
-            glanceOffset.current = 0;
-            targetGlance.current = 0;
+            // Calculate correct glance for this position so we don't snap/jump
+            const initialGlance = calculateGlance(z, initSegment);
+
+            glanceOffset.current = initialGlance;
+            targetGlance.current = initialGlance;
+
+            // Reset swipe glance
             swipeGlance.current = 0;
             targetSwipeGlance.current = 0;
         }
-    }, [camera]);
+    }, [camera, calculateGlance, segmentLength]);
 
     return {
         getCurrentSegment: () => currentSegment.current,

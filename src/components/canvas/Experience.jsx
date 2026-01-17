@@ -42,8 +42,8 @@ const Experience = ({ isLoaded, onSceneReady, performanceTier }) => {
         scrollSpeed: 0.025,
         parallaxIntensity: 0.4,
         smoothing: 0.06,
-        scrollEnabled: hasEntered && !isTeleporting,
-        parallaxEnabled: hasEntered && !isTeleporting
+        scrollEnabled: hasEntered && !isTeleporting && !isInRoom,
+        parallaxEnabled: hasEntered && !isTeleporting && !isInRoom
     });
 
     // Enable camera override during teleportation, when in a room, OR when a door click is pending

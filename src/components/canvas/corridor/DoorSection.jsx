@@ -101,7 +101,7 @@ const DoorSection = ({
         const isSegment0 = position[2] > -80;
 
         if (pendingDoorClick && pendingDoorClick === doorId && isSegment0 && !isOpen && !isAnimating) {
-            handleClick({ stopPropagation: () => { } }); // Trigger click simulation
+            handleClick({ stopPropagation: () => { }, isTeleport: true }); // Trigger click simulation with TELEPORT flag
         }
     }, [pendingDoorClick, doorId, position, isOpen, isAnimating]);
 
@@ -130,8 +130,10 @@ const DoorSection = ({
             if (handleRef.current) handleRef.current.rotation.z = 0;
 
             // 3. Reset Camera Override 
-            // Important: Release control so TeleportRoom/Corridor can take over
-            setCameraOverride?.(false);
+            // Important: DO NOT RELEASE control here. 
+            // Experience.jsx manages the override during "isTeleporting".
+            // If we release it here, useInfiniteCamera takes over before the new room is ready.
+            // setCameraOverride?.(false); <--- REMOVED
 
             // 4. Reset Timers
             if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
@@ -298,7 +300,9 @@ const DoorSection = ({
     }, []);
 
     const handleClick = useCallback((e) => {
-        e.stopPropagation();
+        // e might be null or synthetic from teleport
+        e?.stopPropagation?.();
+        const isTeleport = e?.isTeleport || false;
         if (isAnimating) return;
 
         if (isOpen) {
@@ -318,7 +322,6 @@ const DoorSection = ({
         setIsTiltLocked(true);
 
         // Save camera state BEFORE entering (for ESC exit)
-        // Save camera state BEFORE entering (for ESC exit)
         savedCameraState.current = {
             x: camera.position.x,
             y: camera.position.y,
@@ -327,6 +330,20 @@ const DoorSection = ({
             rotationY: camera.rotation.y,
             rotationZ: camera.rotation.z
         };
+
+        // If this is a TELEPORT entry, overwrite the saved state with a "Safe Corridor Position"
+        // This prevents the camera from jumping back to the OLD room position on exit.
+        if (e && e.isTeleport) {
+            // Safe position: Standing in corridor, looking straight down Z axis
+            savedCameraState.current = {
+                x: 0,
+                y: 0.2, // Correct height matching useInfiniteCamera
+                z: position[2] + 4, // 4 meters back from the door Z
+                rotationX: 0,
+                rotationY: 0, // Look straight down corridor
+                rotationZ: 0
+            };
+        }
 
         // Get door world position
         const doorWorldPos = new THREE.Vector3();
